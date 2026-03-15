@@ -246,7 +246,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             case 'create_menu_item':
                 if (isset($_POST['name'], $_POST['category'], $_POST['price'])) {
                     try {
-                        $variants = !empty($_POST['variants']) ? $_POST['variants'] : null;
+                        $variantsData = [];
+                        if (isset($_POST['variant_name']) && is_array($_POST['variant_name'])) {
+                            foreach ($_POST['variant_name'] as $index => $name) {
+                                $price = $_POST['variant_price'][$index] ?? 0;
+                                if (!empty(trim($name))) {
+                                    $variantsData[] = ['name' => trim($name), 'price' => (float)$price];
+                                }
+                            }
+                        }
+                        $variants = !empty($variantsData) ? json_encode($variantsData) : null;
                         $stmt = $pdo->prepare("INSERT INTO menu_items (category, name, description, price, cost_price, has_protein, variants) VALUES (?, ?, ?, ?, ?, ?, ?)");
                         $stmt->execute([
                             $_POST['category'], 
@@ -285,7 +294,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $newPrice = $_POST['price'];
 
                         // Update the item
-                        $variants = !empty($_POST['variants']) ? $_POST['variants'] : null;
+                        $variantsData = [];
+                        if (isset($_POST['variant_name']) && is_array($_POST['variant_name'])) {
+                            foreach ($_POST['variant_name'] as $index => $name) {
+                                $price = $_POST['variant_price'][$index] ?? 0;
+                                if (!empty(trim($name))) {
+                                    $variantsData[] = ['name' => trim($name), 'price' => (float)$price];
+                                }
+                            }
+                        }
+                        $variants = !empty($variantsData) ? json_encode($variantsData) : null;
                         $stmt = $pdo->prepare("UPDATE menu_items SET category=?, name=?, description=?, price=?, cost_price=?, has_protein=?, variants=? WHERE id=?");
                         $stmt->execute([$_POST['category'], $_POST['name'], $_POST['description'], $newPrice, $_POST['cost_price'] ?? 0.00, isset($_POST['has_protein']) ? 1 : 0, $variants, $_POST['item_id']]);
                         
@@ -1780,7 +1798,13 @@ try {
                 <div class="form-group"><label>Selling Price (RM)</label><input type="number" step="0.01" name="price" placeholder="12.00" required></div>
                 <div class="form-group"><label>Cost Price (RM)</label><input type="number" step="0.01" name="cost_price" placeholder="5.50"></div>
                 <div class="form-group" style="justify-content: center;"><label style="display:flex; align-items:center; gap:10px; margin-top:15px;"><input type="checkbox" name="has_protein"> Has Protein Option</label></div>
-                <div class="form-group" style="grid-column: span 3;"><label>Variants (JSON format)</label><textarea name="variants" placeholder='[{"name":"Single","price":12},{"name":"Double","price":18}]' style="height: 60px;"></textarea></div>
+                <div class="form-group" style="grid-column: span 3;">
+                    <label>Variants</label>
+                    <div id="add-variants-container">
+                        <!-- Dynamic variants will be added here by JS -->
+                    </div>
+                    <button type="button" onclick="addVariantRow('add-variants-container')" class="btn-neutral" style="margin-top: 10px; width: fit-content; padding: 8px 12px;">+ Add Variant</button>
+                </div>
                 <button type="submit" class="btn-primary" style="grid-column: span 3;">Add Item</button>
             </form>
         </div>
@@ -2156,7 +2180,13 @@ try {
         <div class="form-group"><label>Selling Price (RM)</label><input type="number" step="0.01" id="edit-item-price" name="price" required></div>
         <div class="form-group"><label>Cost Price (RM)</label><input type="number" step="0.01" id="edit-item-cost-price" name="cost_price"></div>
         <div class="form-group" style="justify-content: center;"><label style="display:flex; align-items:center; gap:10px; margin-top:15px;"><input type="checkbox" id="edit-item-has_protein" name="has_protein"> Has Protein Option</label></div>
-        <textarea id="edit-item-variants" name="variants" placeholder='Variants JSON (e.g. [{"name":"Single","price":7},{"name":"Double","price":13}])' style="padding: 10px; border: 1px solid #4a5568; border-radius: 5px; grid-column: span 3; height: 60px; background: #1d1a2f; color: white;"></textarea>
+        <div class="form-group" style="grid-column: span 3;">
+            <label>Variants</label>
+            <div id="edit-variants-container">
+                <!-- Dynamic variants will be added here by JS -->
+            </div>
+            <button type="button" onclick="addVariantRow('edit-variants-container')" class="btn-neutral" style="margin-top: 10px; width: fit-content; padding: 8px 12px;">+ Add Variant</button>
+        </div>
         <button type="submit" class="btn-primary" style="grid-column: span 2;">Save Changes</button>
     </form>
   </div>
@@ -2205,6 +2235,21 @@ function switchView(viewId, navItem) {
     navItem.classList.add('active');
 }
 
+function addVariantRow(containerId, name = '', price = '') {
+    const container = document.getElementById(containerId);
+    const variantRow = document.createElement('div');
+    variantRow.style.display = 'flex';
+    variantRow.style.gap = '10px';
+    variantRow.style.marginBottom = '10px';
+    variantRow.style.alignItems = 'center';
+    variantRow.innerHTML = `
+        <input type="text" name="variant_name[]" placeholder="Variant Name (e.g. Double)" value="${name}" style="flex:2;">
+        <input type="number" step="0.01" name="variant_price[]" placeholder="Price" value="${price}" style="flex:1;">
+        <button type="button" onclick="this.parentElement.remove()" class="btn-danger" style="padding: 0 15px; height: 44px;">&times;</button>
+    `;
+    container.appendChild(variantRow);
+}
+
 function openEditModal(item) {
     document.getElementById('edit-item-id').value = item.id;
     document.getElementById('edit-item-name').value = item.name;
@@ -2213,7 +2258,18 @@ function openEditModal(item) {
     document.getElementById('edit-item-price').value = item.price;
     document.getElementById('edit-item-cost-price').value = item.cost_price;
     document.getElementById('edit-item-has_protein').checked = item.has_protein == 1;
-    document.getElementById('edit-item-variants').value = item.variants;
+    
+    const variantsContainer = document.getElementById('edit-variants-container');
+    variantsContainer.innerHTML = ''; // Clear previous variants
+    if (item.variants) {
+        try {
+            const variants = JSON.parse(item.variants);
+            if (Array.isArray(variants)) {
+                variants.forEach(v => addVariantRow('edit-variants-container', v.name, v.price));
+            }
+        } catch (e) { console.error("Could not parse variants JSON:", item.variants); }
+    }
+
     document.getElementById('edit-item-modal').style.display = 'block';
 }
 
