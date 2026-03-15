@@ -1338,6 +1338,46 @@ try {
                     </div>
             </div>
         </div>
+
+        <!-- Daily Sales Visualization -->
+        <div class="panel-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0; color: #ffffff;">📅 Daily Sales Snapshot</h3>
+                <input type="date" id="sales-date-picker" value="<?php echo date('Y-m-d'); ?>" style="padding:8px; border-radius:5px; border:1px solid #444; background:#2a2a2a; color:white; color-scheme:dark;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <!-- Left Column: Chart and Totals -->
+                <div>
+                    <div style="height: 300px; width: 100%; position: relative; margin-bottom: 20px;">
+                        <canvas id="dailySalesDonutChart"></canvas>
+                        <div id="donut-no-data" class="empty-state" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background: #1e1e1e; align-items:center; justify-content:center; flex-direction:column;">
+                            <div class="empty-icon" style="font-size: 50px;">🍩</div>
+                            <h3>No Sales Data</h3>
+                            <p>No sales recorded for this day.</p>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap: 20px; text-align:center;">
+                        <div style="flex:1; background: #2a2a2a; padding:15px; border-radius:10px;">
+                            <p style="margin:0; font-size:12px; color:#aaa;">TOTAL SALES</p>
+                            <p id="daily-total-sales" style="margin:5px 0 0 0; font-size:24px; font-weight:bold; color:#ff5100;">RM 0.00</p>
+                        </div>
+                        <div style="flex:1; background: #2a2a2a; padding:15px; border-radius:10px;">
+                            <p style="margin:0; font-size:12px; color:#aaa;">ITEMS SOLD</p>
+                            <p id="daily-total-quantity" style="margin:5px 0 0 0; font-size:24px; font-weight:bold; color:#ff5100;">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Hot Items -->
+                <div>
+                    <h4 style="margin-top:0; color: #ffffff;">🔥 Hot Selling Items</h4>
+                    <div id="hot-items-list">
+                        <!-- JS will populate this -->
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- VIEW: STAFF -->
@@ -2485,18 +2525,132 @@ if (ctxBar) {
     });
 }
 
-// Dashboard Donut Chart
+// Consistent Color Mapping for Categories
+const categoryColorMap = {
+    'burger': '#ff5100',      // Main Orange
+    'special': '#9b59b6',     // Purple
+    'addon': '#2ecc71',       // Green
+    'minuman': '#3498db',     // Blue
+    'uncategorized': '#95a5a6' // Grey
+};
+const defaultColor = '#bdc3c7'; // A fallback color for new categories
+
+// === DAILY SALES DONUT CHART LOGIC ===
+let dailySalesChart;
+
+function initializeDailySalesChart() {
+    const ctx = document.getElementById('dailySalesDonutChart').getContext('2d');
+    dailySalesChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Sales',
+                data: [],
+                backgroundColor: [], // Will be populated dynamically
+                borderColor: '#1e1e1e',
+                borderWidth: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#aaa', font: { size: 12 }, padding: 15 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            const value = context.raw;
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
+                            return ` ${context.label}: RM ${value.toFixed(2)} (${percentage})`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+async function fetchDailySales(date) {
+    try {
+        const response = await fetch(`get_daily_sales_data.php?date=${date}`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        updateDailySalesUI(data);
+    } catch (error) {
+        console.error('Failed to fetch daily sales data:', error);
+        document.getElementById('daily-total-sales').innerText = 'Error';
+        document.getElementById('daily-total-quantity').innerText = 'Error';
+        document.getElementById('hot-items-list').innerHTML = '<p style="color:red;">Failed to load data.</p>';
+    }
+}
+
+function updateDailySalesUI(data) {
+    document.getElementById('daily-total-sales').innerText = `RM ${data.totalSales.toFixed(2)}`;
+    document.getElementById('daily-total-quantity').innerText = data.totalQuantity;
+
+    const hotItemsList = document.getElementById('hot-items-list');
+    hotItemsList.innerHTML = '';
+    if (data.hotItems.length > 0) {
+        let listHtml = '<table class="admin-table" style="margin:0;">';
+        data.hotItems.forEach((item, index) => {
+            const icon = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : '🔥'));
+            listHtml += `
+                <tr style="background:none;">
+                    <td style="padding: 12px 0; border-color: #333;">${icon} ${item.item_name}</td>
+                    <td style="padding: 12px 0; text-align:right; border-color: #333; font-weight:bold;">${item.quantity_sold} sold</td>
+                </tr>
+            `;
+        });
+        listHtml += '</table>';
+        hotItemsList.innerHTML = listHtml;
+    } else {
+        hotItemsList.innerHTML = `
+            <div class="empty-state" style="padding: 40px 0;">
+                <div class="empty-icon">🤷</div>
+                <p>No items sold on this day.</p>
+            </div>`;
+    }
+
+    const noDataEl = document.getElementById('donut-no-data');
+    if (data.categoryData.data.length > 0) {
+        noDataEl.style.display = 'none';
+        dailySalesChart.data.labels = data.categoryData.labels;
+        dailySalesChart.data.datasets[0].data = data.categoryData.data;
+        // Dynamically assign colors based on labels
+        dailySalesChart.data.datasets[0].backgroundColor = data.categoryData.labels.map(label => categoryColorMap[label.toLowerCase()] || defaultColor);
+        dailySalesChart.update();
+    } else {
+        noDataEl.style.display = 'flex';
+        dailySalesChart.data.labels = [];
+        dailySalesChart.data.datasets[0].data = [];
+        dailySalesChart.update();
+    }
+}
+
+// Dashboard Main Donut Chart (Sales by Category)
 const ctxDonut = document.getElementById('categoryDonutChart');
 if (ctxDonut) {
+    const donutLabels = <?php echo json_encode($pieLabels); ?>;
+    // Dynamically assign colors based on labels from PHP
+    const donutColors = donutLabels.map(label => categoryColorMap[label.toLowerCase()] || defaultColor);
+
     new Chart(ctxDonut.getContext('2d'), {
         type: 'doughnut',
         data: {
-            labels: <?php echo json_encode($pieLabels); ?>,
+            labels: donutLabels,
             datasets: [{
                 label: 'Sales',
                 data: <?php echo json_encode($pieData); ?>,
-                backgroundColor: ['#ff5100', '#3498db', '#2ecc71', '#9b59b6', '#f1c40f', '#e74c3c'],
-                borderColor: '#1e1e1e', // Match panel background
+                backgroundColor: donutColors,
+                borderColor: '#1e1e1e',
                 borderWidth: 4,
                 hoverBorderColor: '#333'
             }]
@@ -2508,13 +2662,7 @@ if (ctxDonut) {
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: {
-                        color: '#aaa',
-                        font: { size: 12 },
-                        padding: 20,
-                        usePointStyle: true,
-                        pointStyle: 'rectRounded'
-                    }
+                    labels: { color: '#aaa', font: { size: 12 }, padding: 20, usePointStyle: true, pointStyle: 'rectRounded' }
                 },
                 tooltip: {
                     callbacks: {
@@ -2549,6 +2697,21 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             toast.classList.remove('show');
         }, 5100);
+    }
+
+    // Initialize Daily Sales Chart
+    const datePicker = document.getElementById('sales-date-picker');
+    if (datePicker) {
+        initializeDailySalesChart();
+        fetchDailySales(datePicker.value); // Initial load
+
+        datePicker.addEventListener('change', (event) => {
+            fetchDailySales(event.target.value);
+        });
+
+        setInterval(() => {
+            fetchDailySales(datePicker.value);
+        }, 30000); // Auto-update every 30 seconds
     }
 });
 
