@@ -101,8 +101,7 @@ try {
         .report-meta strong { color: #fff; }
 
         /* Cards */
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #333; text-align: center; }
+        .stats-grid { display: grid; grid-template-columns: repeat(rus: 10px; border: 1px solid #333; text-align: center; }
         .stat-label { color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
         .stat-value { font-size: 24px; font-weight: bold; color: #ff5100; }
 
@@ -111,9 +110,8 @@ try {
         .chart-wrapper { background: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #333; height: 300px; margin-bottom: 30px; }
         
         table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }
-        th { text-align: left; padding: 12px; background: #2a2a2a; color: #ff5100; border-bottom: 2px solid #ff5100; }
-        td { padding: 12px; border-bottom: 1px solid #333; color: #ddd; }
-        tr:nth-child(even) { background: #181818; }
+        th { text-align: left; padding: 12px; background: #2a2a2a; color: #ff5100; border-bottom: 2px solid #ff5100; font-size: 11px; text-transform: uppercase; }
+        td { padding: 12px; border-bottom: 1px solid #333; color: #ddd; }{
         .text-right { text-align: right; }
 
         /* Print Button */
@@ -129,6 +127,19 @@ try {
             .report-header, th { border-color: #000 !important; }
             td { border-color: #eee; color: #000; }
             tr:nth-child(even) { background: #f9f9f9; }
+        }
+
+        /* Panel style for consistency with admin.php */
+        .panel-card {
+            background: #1e1e1e;
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid #333;
+            margin-bottom: 30px;
+        }
+        .panel-header {
+            margin: 0 0 20px 0;
+            font-size: 18px;
         }
     </style>
 </head>
@@ -181,65 +192,31 @@ try {
             </div>
         </div>
     </div>
-
-    <div class="section-title">Top Selling Products</div>
-    <table>
-        <thead>
-            <tr>
-                <th>Product Name</th>
-                <th class="text-right">Quantity Sold</th>
-                <th class="text-right">Total Revenue</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach($topProducts as $p): ?>
-            <tr>
-                <td><?php echo htmlspecialchars($p['item_name']); ?></td>
-                <td class="text-right"><?php echo number_format($p['total_qty']); ?></td>
-                <td class="text-right">RM <?php echo number_format($p['total_revenue'], 2); ?></td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-
-    <div class="section-title">Payment Methods</div>
-    <table>
-        <thead>
-            <tr>
-                <th>Method</th>
-                <th class="text-right">Transactions</th>
-                <th class="text-right">Total Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach($salesByPayment as $p): ?>
-            <tr>
-                <td><?php echo htmlspecialchars($p['payment_method']); ?></td>
-                <td class="text-right"><?php echo number_format($p['count']); ?></td>
-                <td class="text-right">RM <?php echo number_format($p['total'], 2); ?></td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-    
-    <div style="text-align:center; color:#555; font-size:12px; margin-top:40px; border-top:1px solid #333; padding-top:20px;">
-        &copy; <?php echo date('Y'); ?> BamBam Burger Admin System. Internal Use Only.
-    </div>
-</div>
-
-<script>
-    // Trend Chart
-    new Chart(document.getElementById('trendChart'), {
-        type: 'line',
-        data: {
-            labels: <?php echo json_encode($trendLabels); ?>,
-            datasets: [{
-                label: 'Revenue (RM)',
-                data: <?php echo json_encode($trendRevenue); ?>,
-                borderColor: '#ff5100',
-                backgroundColor: 'rgba(255, 81, 0, 0.1)',
-                borderWidth: 2,
-                fill: true,
+vead>
+      x
+?php endforeach; ?>
+    <
+    <div class="panel-card">
+        <h3 class="panel-header">💳 Payment Methods</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Method</th>
+                    <th class="text-right">Transactions</th>
+                    <th class="text-right">Total Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach($salesByPayment as $p): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($p['payment_method']); ?></td>
+                    <td class="text-right"><?php echo number_format($p['count']); ?></td>
+                    <td class="text-right">RM <?php echo number_format($p['total'], 2); ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        <
+    fill: true,
                 tension: 0.3
             }]
         },
