@@ -1002,6 +1002,22 @@ try {
     .btn-neutral { background: #374151; color: #cbd5e0; padding: 5px 10px; font-size: 12px; border: 1px solid #4a5568; border-radius: 5px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
     .btn-neutral:hover { background: #4a5568; color: #ffffff; }
     .action-btn { min-width: 95px; text-align: center; }
+
+    /* Logout Button in Header */
+    .btn-logout {
+        background: #ff5100;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background 0.2s ease;
+    }
+    .btn-logout:hover { background: #e04600; }
 </style>
 <style>
     /* New Styles for Enhanced Orders View */
@@ -1236,6 +1252,7 @@ try {
                 </div>
                 <i class="fas fa-chevron-down profile-arrow"></i>
             </div>
+            <a href="admin_logout.php" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </header>
 
