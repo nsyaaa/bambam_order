@@ -34,6 +34,11 @@ try {
     $stmt->execute();
     if ($stmt->rowCount() == 0) $pdo->exec("INSERT INTO system_settings (setting_key, setting_value) VALUES ('store_status', 'open')");
 
+    // Ensure global_store_status exists
+    $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
+    $stmt->execute();
+    if ($stmt->rowCount() == 0) $pdo->exec("INSERT INTO system_settings (setting_key, setting_value) VALUES ('global_store_status', 'open')");
+
     // Create and populate branches table
     $pdo->exec("CREATE TABLE IF NOT EXISTS branches (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, phone VARCHAR(20), is_open TINYINT(1) NOT NULL DEFAULT 1)");
     $stmt = $pdo->query("SELECT COUNT(*) FROM branches");
@@ -356,6 +361,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
                 break;
 
+            case 'toggle_global_status':
+                if ($isSuperAdmin && isset($_POST['status'])) {
+                    try {
+                        $status = $_POST['status'] == 'open' ? 'open' : 'closed';
+                        $stmt = $pdo->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = 'global_store_status'");
+                        $stmt->execute([$status]);
+                        $message = "All branches are now " . strtoupper($status);
+                        logActivity($pdo, $currentUserId, $currentUserName, "Global Status", "All branches set to " . strtoupper($status));
+                    } catch (PDOException $e) { $message = "Error: " . $e->getMessage(); }
+                }
+                break;
+
             // --- REPORT GENERATION ---
             case 'export_report':
                 if (isset($_POST['start_date'], $_POST['end_date'])) {
@@ -644,6 +661,10 @@ try {
     // Fetch Store Status
     $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'store_status'");
     $storeStatus = $stmt->fetchColumn() ?: 'open';
+
+    // Fetch Global Store Status
+    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
+    $globalStoreStatus = $stmt->fetchColumn() ?: 'open';
 
     // Fetch all branches for settings
     try {
@@ -2124,25 +2145,43 @@ try {
     <!-- VIEW: SETTINGS -->
     <div id="view-settings" class="view-section">
         <div class="panel-card">
-            <h3 style="margin-top:0; color: #ffffff;">🏪 Branch Status Management</h3>
-            <p style="margin:5px 0 20px 0; font-size:13px; color:#a0aec0;">Toggle to "Closed" to disable customer ordering for a specific branch.</p>
+            <h3 style="margin-top:0; color: #ffffff;">⚙️ System & Branch Status</h3>
+
+            <!-- Global Toggle -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:20px; background:#4a1d1d; border-radius:10px; border:1px solid #7f1d1d; margin-bottom: 30px;">
+                <div>
+                    <h4 style="margin:0; color: #ffffff;">🚨 Close All Branches (Master Switch)</h4>
+                    <p style="margin:5px 0 0 0; font-size:13px; color:#fecaca;">When ON, all branches will be closed regardless of individual settings.</p>
+                </div>
+                <form method="POST">
+                    <input type="hidden" name="action" value="toggle_global_status">
+                    <input type="hidden" name="status" value="<?php echo $globalStoreStatus == 'open' ? 'closed' : 'open'; ?>">
+                    <label class="switch">
+                        <input type="checkbox" onchange="this.form.submit()" <?php echo $globalStoreStatus == 'closed' ? 'checked' : ''; ?>>
+                        <span class="slider" style="<?php echo $globalStoreStatus == 'closed' ? 'background-color: #c0392b;' : ''; ?>"></span>
+                    </label>
+                </form>
+            </div>
+
+            <p style="margin:5px 0 20px 0; font-size:13px; color:#a0aec0;">Individually manage branch status. These are ignored if "Close All Branches" is active.</p>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <?php foreach($allBranches as $branch): 
                     $isOpen = (int)$branch['is_open'] === 1;
+                    $isGloballyClosed = $globalStoreStatus === 'closed';
                 ?>
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:#1d1a2f; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:#1d1a2f; border-radius:10px; border:1px solid rgba(255,255,255,0.1); opacity: <?php echo $isGloballyClosed ? '0.5' : '1'; ?>;">
                     <div>
                         <h4 style="margin:0; color: #ffffff;"><?php echo htmlspecialchars($branch['name']); ?></h4>
-                        <p style="margin:5px 0 0 0; font-size:13px; color: <?php echo $isOpen ? '#22c55e' : '#ef4444'; ?>;">
-                            <?php echo $isOpen ? '● Open' : '● Closed'; ?>
+                        <p style="margin:5px 0 0 0; font-size:13px; color: <?php echo ($isOpen && !$isGloballyClosed) ? '#22c55e' : '#ef4444'; ?>;">
+                            <?php echo ($isOpen && !$isGloballyClosed) ? '● Open' : '● Closed'; ?>
                         </p>
                     </div>
                     <form method="POST">
                         <input type="hidden" name="action" value="toggle_branch_status">
                         <input type="hidden" name="branch_id" value="<?php echo $branch['id']; ?>">
                         <input type="hidden" name="status" value="<?php echo $isOpen ? '0' : '1'; ?>">
-                        <label class="switch"><input type="checkbox" onchange="this.form.submit()" <?php echo $isOpen ? 'checked' : ''; ?>><span class="slider"></span></label>
+                        <label class="switch"><input type="checkbox" onchange="this.form.submit()" <?php echo $isOpen ? 'checked' : ''; ?> <?php echo $isGloballyClosed ? 'disabled' : ''; ?>><span class="slider"></span></label>
                     </form>
                 </div>
                 <?php endforeach; ?>

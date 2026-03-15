@@ -36,6 +36,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $pdo->beginTransaction();
 
+        // Server-side validation: Check global status first
+        $stmtGlobal = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
+        $globalStatus = $stmtGlobal->fetchColumn();
+
+        if ($globalStatus === 'closed') {
+            throw new Exception("All branches are currently closed and cannot accept orders.");
+        }
+
         // Server-side validation: Check if branch is open
         $branchName = $_POST['branch'] ?? 'Kangar';
         $stmtBranch = $pdo->prepare("SELECT is_open FROM branches WHERE name = ?");

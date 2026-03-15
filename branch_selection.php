@@ -2,10 +2,18 @@
 include 'header.php'; 
 include_once 'db.php';
 
+// Check global status first
+$globalStoreStatus = 'open';
 $openBranches = [];
 try {
-    $stmt = $pdo->query("SELECT name, phone FROM branches WHERE is_open = 1 ORDER BY name ASC");
-    $openBranches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
+    $globalStoreStatus = $stmt->fetchColumn() ?: 'open';
+
+    // Only fetch branches if the store is globally open
+    if ($globalStoreStatus === 'open') {
+        $stmt = $pdo->query("SELECT name, phone FROM branches WHERE is_open = 1 ORDER BY name ASC");
+        $openBranches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 } catch (Exception $e) {}
 ?>
 
@@ -112,7 +120,7 @@ try {
     <h2>Choose Your <span>Branch</span></h2>
     
     <div class="branch-grid">
-        <?php if (empty($openBranches)): ?>
+        <?php if ($globalStoreStatus === 'closed' || empty($openBranches)): ?>
             <div style="grid-column: 1 / -1; background: #181818; padding: 40px; border-radius: 15px; border: 1px solid #333;">
                 <h3 style="color: #ff5100;">All Branches Currently Closed</h3>
                 <p style="color: #aaa;">Please check back later. We're sorry for the inconvenience.</p>

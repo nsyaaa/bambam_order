@@ -2,10 +2,14 @@
 include 'header.php'; 
 include_once 'db.php';
 
-// Fetch branch statuses for JS validation
+// Fetch global and branch statuses for JS validation
+$globalStoreStatus = 'open';
 $branchStatuses = [];
 try {
-    $stmt = $pdo->query("SELECT name, is_open FROM branches");
+    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
+    $globalStoreStatus = $stmt->fetchColumn() ?: 'open';
+
+    $stmt = $pdo->query("SELECT name, is_open FROM branches"); // Fetch all for JS logic
     $branchStatuses = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 } catch (Exception $e) {}
 
@@ -607,6 +611,7 @@ if (isset($_SESSION['user_id'])) {
 <script>
 const menuData = <?php echo json_encode($jsMenuData); ?>;
 const isLoggedIn = <?php echo isset($_SESSION['user_id']) ? 'true' : 'false'; ?>;
+const globalStoreStatus = '<?php echo $globalStoreStatus; ?>';
 const branchStatuses = <?php echo json_encode($branchStatuses); ?>;
 let cart = JSON.parse(localStorage.getItem('bambam_cart')) || [];
 
@@ -911,13 +916,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const branch = localStorage.getItem('selected_branch') || 'Main Branch';
     document.getElementById('current-branch-display').innerText = branch;
 
-    // Check if the selected branch is open
+    // Check if the store is closed (globally or individually)
     const selectedBranchStatus = branchStatuses[branch];
-    if (selectedBranchStatus === '0' || selectedBranchStatus === 0) {
+    let isBranchClosed = false;
+    let closedMessage = '';
+
+    if (globalStoreStatus === 'closed') {
+        isBranchClosed = true;
+        closedMessage = `⛔ All branches are currently CLOSED. You cannot place orders at this time.`;
+    } else if (selectedBranchStatus === '0' || selectedBranchStatus === 0) {
+        isBranchClosed = true;
+        closedMessage = `⛔ The <strong>${branch}</strong> branch is currently CLOSED. You cannot place orders for this location.`;
+    }
+
+    if (isBranchClosed) {
         // Branch is closed, show banner and disable ordering
         const closedBanner = document.createElement('div');
         closedBanner.className = 'store-closed-banner';
-        closedBanner.innerHTML = `⛔ The <strong>${branch}</strong> branch is currently CLOSED. You cannot place orders for this location.`;
+        closedBanner.innerHTML = closedMessage;
         document.body.appendChild(closedBanner);
 
         document.querySelectorAll('.add-btn').forEach(btn => {
