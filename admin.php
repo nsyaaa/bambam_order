@@ -33,19 +33,6 @@ try {
     $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'store_status'");
     $stmt->execute();
     if ($stmt->rowCount() == 0) $pdo->exec("INSERT INTO system_settings (setting_key, setting_value) VALUES ('store_status', 'open')");
-
-    // Ensure global_store_status exists
-    $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
-    $stmt->execute();
-    if ($stmt->rowCount() == 0) $pdo->exec("INSERT INTO system_settings (setting_key, setting_value) VALUES ('global_store_status', 'open')");
-
-    // Create and populate branches table
-    $pdo->exec("CREATE TABLE IF NOT EXISTS branches (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, phone VARCHAR(20), is_open TINYINT(1) NOT NULL DEFAULT 1)");
-    $stmt = $pdo->query("SELECT COUNT(*) FROM branches");
-    if ($stmt->fetchColumn() == 0) {
-        $pdo->exec("INSERT INTO branches (name, phone) VALUES ('Kangar', '017-590 0799'), ('Jejawi', '013-777 1763'), ('Arau', '019-551 1765'), ('Kuala Perlis', '011-1989 8669'), ('Beseri', '011-1006 4068')");
-    }
-
 } catch (PDOException $e) {}
 
 // Helper: Log Activity
@@ -349,60 +336,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
                 break;
 
-            case 'toggle_branch_status':
-                if ($isSuperAdmin && isset($_POST['branch_id'], $_POST['status'])) {
-                    try {
-                        $status = $_POST['status'] == '1' ? 1 : 0;
-                        $stmt = $pdo->prepare("UPDATE branches SET is_open = ? WHERE id = ?");
-                        $stmt->execute([$status, $_POST['branch_id']]);
-                        $message = "Branch status updated.";
-                        logActivity($pdo, $currentUserId, $currentUserName, "Toggle Branch", "Branch ID {$_POST['branch_id']} -> " . ($status ? 'Open' : 'Closed'));
-                    } catch (PDOException $e) { $message = "Error: " . $e->getMessage(); }
-                }
-                break;
-
-            case 'toggle_global_status':
-                if ($isSuperAdmin && isset($_POST['status'])) {
-                    try {
-                        $status = $_POST['status'] == 'open' ? 'open' : 'closed';
-                        $stmt = $pdo->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = 'global_store_status'");
-                        $stmt->execute([$status]);
-                        $message = "All branches are now " . strtoupper($status);
-                        logActivity($pdo, $currentUserId, $currentUserName, "Global Status", "All branches set to " . strtoupper($status));
-                    } catch (PDOException $e) { $message = "Error: " . $e->getMessage(); }
-                }
-                break;
-
             // --- REPORT GENERATION ---
             case 'export_report':
                 if (isset($_POST['start_date'], $_POST['end_date'])) {
                     $start = $_POST['start_date'];
-                    $end = $_POST['end_date'];
-                    $startSql = $start . ' 00:00:00';
-                    $endSql = $end . ' 23:59:59';
+                    $end = $_POST['end_date'] . ' 23:59:59';
                     
                     try {
-                        // Query only completed/served orders for a sales report
-                        $stmt = $pdo->prepare("SELECT id, created_at, customer_name, branch, order_type, total_amount, status, payment_method FROM orders WHERE created_at BETWEEN ? AND ? AND status IN ('Served', 'Completed') ORDER BY created_at DESC");
-                        $stmt->execute([$startSql, $endSql]);
+                        $stmt = $pdo->prepare("SELECT id, created_at, customer_name, branch, order_type, total_amount, status, payment_method FROM orders WHERE created_at BETWEEN ? AND ? ORDER BY created_at DESC");
+                        $stmt->execute([$start, $end]);
                         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         
                         // Clear buffer to prevent HTML pollution in CSV
                         ob_end_clean();
                         header('Content-Type: text/csv');
-                        header('Content-Disposition: attachment; filename="sales_report_' . $start . '_to_' . $end . '.csv"');
+                        header('Content-Disposition: attachment; filename="sales_report_' . $_POST['start_date'] . '_to_' . $_POST['end_date'] . '.csv"');
                         
                         $output = fopen('php://output', 'w');
-                        $header = ['Order ID', 'Date', 'Customer', 'Branch', 'Type', 'Total (RM)', 'Status', 'Payment Method'];
-                        fputcsv($output, $header);
-                        
-                        $totalSales = 0;
-                        foreach ($rows as $row) {
-                            $totalSales += (float)$row['total_amount'];
-                            fputcsv($output, $row);
-                        }
-                        fputcsv($output, []); // Spacer row
-                        fputcsv($output, ['', '', '', '', 'TOTAL', number_format($totalSales, 2), '', '']);
+                        fputcsv($output, ['Order ID', 'Date', 'Customer', 'Branch', 'Type', 'Total (RM)', 'Status', 'Payment Method']);
+                        foreach ($rows as $row) fputcsv($output, $row);
                         fclose($output);
                         exit;
                     } catch (PDOException $e) { $message = "Error generating report: " . $e->getMessage(); }
@@ -453,7 +405,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 // Fetch statistics
 $totalUsers = $adminUsers = $regularUsers = $totalOrders = $totalRevenue = $pendingOrdersCount = $totalSalesToday = $activeOrdersCount = $newReviewsCount = 0;
-$allUsers = $recentOrders = $inventoryItems = $ordersItemsMap = $allBranches = [];
+$allUsers = $recentOrders = $inventoryItems = $ordersItemsMap = [];
 $chartLabels = []; $chartValues = []; $reviews = []; $bestSellers = []; $salesByCategory = [];
 try {
     // Total users
@@ -661,16 +613,6 @@ try {
     // Fetch Store Status
     $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'store_status'");
     $storeStatus = $stmt->fetchColumn() ?: 'open';
-
-    // Fetch Global Store Status
-    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
-    $globalStoreStatus = $stmt->fetchColumn() ?: 'open';
-
-    // Fetch all branches for settings
-    try {
-        $stmt = $pdo->query("SELECT * FROM branches ORDER BY name ASC");
-        $allBranches = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (Exception $e) {}
 
     // Fetch last login for current user
     $currentUserLastLogin = 'Never';
@@ -1960,14 +1902,7 @@ try {
                     <input type="date" name="report_end" value="<?php echo $reportEnd; ?>" style="padding:8px; border-radius:5px; border:1px solid rgba(255,255,255,0.1); background:#373359; color:white; color-scheme:dark;">
                 </div>
                 <button type="submit" class="btn-primary" style="height:38px; margin-top:14px;">Filter</button>
-                <button type="button" onclick="window.open('print_report.php?start=<?php echo $reportStart; ?>&end=<?php echo $reportEnd; ?>', '_blank')" class="btn-primary" style="height:38px; margin-top:14px; background: #c0392b; border-color: #c0392b;"><i class="fas fa-file-pdf"></i> Export PDF</button>
-                <!-- Excel Export Form -->
-                <form method="POST" style="margin:0; display:inline-block;">
-                    <input type="hidden" name="action" value="export_report">
-                    <input type="hidden" name="start_date" value="<?php echo $reportStart; ?>">
-                    <input type="hidden" name="end_date" value="<?php echo $reportEnd; ?>">
-                    <button type="submit" class="btn-primary" style="height:38px; margin-top:14px; background: #166534; border-color: #166534;"><i class="fas fa-file-excel"></i> Export Excel</button>
-                </form>
+                <button type="button" onclick="window.open('print_report.php?start=<?php echo $reportStart; ?>&end=<?php echo $reportEnd; ?>', '_blank')" class="btn-primary" style="height:38px; margin-top:14px; background: #111; border: 1px solid #ff5100; color: #ff5100;"><i class="fas fa-print"></i> Print Report</button>
             </form>
             <div class="filter-pills" style="margin:0;">
                 <a href="?view=reports&report_start=<?php echo date('Y-m-d'); ?>&report_end=<?php echo date('Y-m-d'); ?>" class="filter-pill">Today</a>
@@ -2145,46 +2080,20 @@ try {
     <!-- VIEW: SETTINGS -->
     <div id="view-settings" class="view-section">
         <div class="panel-card">
-            <h3 style="margin-top:0; color: #ffffff;">⚙️ System & Branch Status</h3>
-
-            <!-- Global Toggle -->
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:20px; background:#4a1d1d; border-radius:10px; border:1px solid #7f1d1d; margin-bottom: 30px;">
+            <h3 style="margin-top:0; color: #ffffff;">⚙️ System Settings</h3>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:20px; background:#1d1a2f; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
                 <div>
-                    <h4 style="margin:0; color: #ffffff;">🚨 Close All Branches (Master Switch)</h4>
-                    <p style="margin:5px 0 0 0; font-size:13px; color:#fecaca;">When ON, all branches will be closed regardless of individual settings.</p>
+                    <h4 style="margin:0; color: #ffffff;">Store Status</h4>
+                    <p style="margin:5px 0 0 0; font-size:13px; color:#a0aec0;">Toggle to "Closed" to disable customer ordering.</p>
                 </div>
                 <form method="POST">
-                    <input type="hidden" name="action" value="toggle_global_status">
-                    <input type="hidden" name="status" value="<?php echo $globalStoreStatus == 'open' ? 'closed' : 'open'; ?>">
+                    <input type="hidden" name="action" value="toggle_store">
                     <label class="switch">
-                        <input type="checkbox" onchange="this.form.submit()" <?php echo $globalStoreStatus == 'closed' ? 'checked' : ''; ?>>
-                        <span class="slider" style="<?php echo $globalStoreStatus == 'closed' ? 'background-color: #c0392b;' : ''; ?>"></span>
+                        <input type="checkbox" name="status" value="open" onchange="this.form.submit()" <?php echo $storeStatus == 'open' ? 'checked' : ''; ?>>
+                        <span class="slider"></span>
                     </label>
                 </form>
-            </div>
-
-            <p style="margin:5px 0 20px 0; font-size:13px; color:#a0aec0;">Individually manage branch status. These are ignored if "Close All Branches" is active.</p>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <?php foreach($allBranches as $branch): 
-                    $isOpen = (int)$branch['is_open'] === 1;
-                    $isGloballyClosed = $globalStoreStatus === 'closed';
-                ?>
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:#1d1a2f; border-radius:10px; border:1px solid rgba(255,255,255,0.1); opacity: <?php echo $isGloballyClosed ? '0.5' : '1'; ?>;">
-                    <div>
-                        <h4 style="margin:0; color: #ffffff;"><?php echo htmlspecialchars($branch['name']); ?></h4>
-                        <p style="margin:5px 0 0 0; font-size:13px; color: <?php echo ($isOpen && !$isGloballyClosed) ? '#22c55e' : '#ef4444'; ?>;">
-                            <?php echo ($isOpen && !$isGloballyClosed) ? '● Open' : '● Closed'; ?>
-                        </p>
-                    </div>
-                    <form method="POST">
-                        <input type="hidden" name="action" value="toggle_branch_status">
-                        <input type="hidden" name="branch_id" value="<?php echo $branch['id']; ?>">
-                        <input type="hidden" name="status" value="<?php echo $isOpen ? '0' : '1'; ?>">
-                        <label class="switch"><input type="checkbox" onchange="this.form.submit()" <?php echo $isOpen ? 'checked' : ''; ?> <?php echo $isGloballyClosed ? 'disabled' : ''; ?>><span class="slider"></span></label>
-                    </form>
-                </div>
-                <?php endforeach; ?>
             </div>
         </div>
     </div>
@@ -2571,6 +2480,52 @@ if (ctxBar) {
                 x: { grid: { display: false }, ticks: { color: '#a0aec0' } }
             },
             plugins: { legend: { display: false } }
+        }
+    });
+}
+
+// Dashboard Donut Chart
+const ctxDonut = document.getElementById('categoryDonutChart');
+if (ctxDonut) {
+    new Chart(ctxDonut.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: <?php echo json_encode($pieLabels); ?>,
+            datasets: [{
+                label: 'Sales',
+                data: <?php echo json_encode($pieData); ?>,
+                backgroundColor: ['#ff5100', '#3498db', '#2ecc71', '#9b59b6', '#f1c40f', '#e74c3c'],
+                borderColor: '#1e1e1e', // Match panel background
+                borderWidth: 4,
+                hoverBorderColor: '#333'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#aaa',
+                        font: { size: 12 },
+                        padding: 20,
+                        usePointStyle: true,
+                        pointStyle: 'rectRounded'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            const value = context.raw;
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
+                            return ` ${context.label}: RM ${value.toFixed(2)} (${percentage})`;
+                        }
+                    }
+                }
+            }
         }
     });
 }
