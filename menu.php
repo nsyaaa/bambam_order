@@ -2,11 +2,11 @@
 include 'header.php'; 
 include_once 'db.php';
 
-// Check Store Status
-$storeStatus = 'open';
+// Fetch branch statuses for JS validation
+$branchStatuses = [];
 try {
-    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'store_status'");
-    $storeStatus = $stmt->fetchColumn() ?: 'open';
+    $stmt = $pdo->query("SELECT name, is_open FROM branches");
+    $branchStatuses = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 } catch (Exception $e) {}
 
 // Fetch best selling item names (e.g., top 3)
@@ -410,10 +410,6 @@ if (isset($_SESSION['user_id'])) {
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
-<?php if($storeStatus === 'closed'): ?>
-    <div class="store-closed-banner">⛔ The store is currently CLOSED. Orders cannot be placed at this time.</div>
-<?php endif; ?>
-
 <div id="menu-content">
     <div class="branch-info-bar">
         <div class="branch-left">
@@ -534,13 +530,9 @@ if (isset($_SESSION['user_id'])) {
                         
                         <input type="number" class="qty" value="1">
                         
-                        <?php if($storeStatus === 'open'): ?>
                         <a href="#" class="add-btn" onclick="event.preventDefault(); addToCart(this);">
                             +
                         </a>
-                        <?php else: ?>
-                        <span style="color:#777; font-size:12px;">Closed</span>
-                        <?php endif; ?>
                     </div>
                 </div>
                 <?php
@@ -615,6 +607,7 @@ if (isset($_SESSION['user_id'])) {
 <script>
 const menuData = <?php echo json_encode($jsMenuData); ?>;
 const isLoggedIn = <?php echo isset($_SESSION['user_id']) ? 'true' : 'false'; ?>;
+const branchStatuses = <?php echo json_encode($branchStatuses); ?>;
 let cart = JSON.parse(localStorage.getItem('bambam_cart')) || [];
 
 function showCategories() {
@@ -917,6 +910,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const branch = localStorage.getItem('selected_branch') || 'Main Branch';
     document.getElementById('current-branch-display').innerText = branch;
+
+    // Check if the selected branch is open
+    const selectedBranchStatus = branchStatuses[branch];
+    if (selectedBranchStatus === '0' || selectedBranchStatus === 0) {
+        // Branch is closed, show banner and disable ordering
+        const closedBanner = document.createElement('div');
+        closedBanner.className = 'store-closed-banner';
+        closedBanner.innerHTML = `⛔ The <strong>${branch}</strong> branch is currently CLOSED. You cannot place orders for this location.`;
+        document.body.appendChild(closedBanner);
+
+        document.querySelectorAll('.add-btn').forEach(btn => {
+            btn.outerHTML = '<span style="color:#777; font-size:12px; font-weight:bold;">CLOSED</span>';
+        });
+    }
 
     document.querySelectorAll('.menu-box').forEach(box => {
         box.addEventListener('click', () => {

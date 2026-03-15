@@ -33,6 +33,14 @@ try {
     $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'store_status'");
     $stmt->execute();
     if ($stmt->rowCount() == 0) $pdo->exec("INSERT INTO system_settings (setting_key, setting_value) VALUES ('store_status', 'open')");
+
+    // Create and populate branches table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS branches (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, phone VARCHAR(20), is_open TINYINT(1) NOT NULL DEFAULT 1)");
+    $stmt = $pdo->query("SELECT COUNT(*) FROM branches");
+    if ($stmt->fetchColumn() == 0) {
+        $pdo->exec("INSERT INTO branches (name, phone) VALUES ('Kangar', '017-590 0799'), ('Jejawi', '013-777 1763'), ('Arau', '019-551 1765'), ('Kuala Perlis', '011-1989 8669'), ('Beseri', '011-1006 4068')");
+    }
+
 } catch (PDOException $e) {}
 
 // Helper: Log Activity
@@ -336,25 +344,48 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
                 break;
 
+            case 'toggle_branch_status':
+                if ($isSuperAdmin && isset($_POST['branch_id'], $_POST['status'])) {
+                    try {
+                        $status = $_POST['status'] == '1' ? 1 : 0;
+                        $stmt = $pdo->prepare("UPDATE branches SET is_open = ? WHERE id = ?");
+                        $stmt->execute([$status, $_POST['branch_id']]);
+                        $message = "Branch status updated.";
+                        logActivity($pdo, $currentUserId, $currentUserName, "Toggle Branch", "Branch ID {$_POST['branch_id']} -> " . ($status ? 'Open' : 'Closed'));
+                    } catch (PDOException $e) { $message = "Error: " . $e->getMessage(); }
+                }
+                break;
+
             // --- REPORT GENERATION ---
             case 'export_report':
                 if (isset($_POST['start_date'], $_POST['end_date'])) {
                     $start = $_POST['start_date'];
-                    $end = $_POST['end_date'] . ' 23:59:59';
+                    $end = $_POST['end_date'];
+                    $startSql = $start . ' 00:00:00';
+                    $endSql = $end . ' 23:59:59';
                     
                     try {
-                        $stmt = $pdo->prepare("SELECT id, created_at, customer_name, branch, order_type, total_amount, status, payment_method FROM orders WHERE created_at BETWEEN ? AND ? ORDER BY created_at DESC");
-                        $stmt->execute([$start, $end]);
+                        // Query only completed/served orders for a sales report
+                        $stmt = $pdo->prepare("SELECT id, created_at, customer_name, branch, order_type, total_amount, status, payment_method FROM orders WHERE created_at BETWEEN ? AND ? AND status IN ('Served', 'Completed') ORDER BY created_at DESC");
+                        $stmt->execute([$startSql, $endSql]);
                         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         
                         // Clear buffer to prevent HTML pollution in CSV
                         ob_end_clean();
                         header('Content-Type: text/csv');
-                        header('Content-Disposition: attachment; filename="sales_report_' . $_POST['start_date'] . '_to_' . $_POST['end_date'] . '.csv"');
+                        header('Content-Disposition: attachment; filename="sales_report_' . $start . '_to_' . $end . '.csv"');
                         
                         $output = fopen('php://output', 'w');
-                        fputcsv($output, ['Order ID', 'Date', 'Customer', 'Branch', 'Type', 'Total (RM)', 'Status', 'Payment Method']);
-                        foreach ($rows as $row) fputcsv($output, $row);
+                        $header = ['Order ID', 'Date', 'Customer', 'Branch', 'Type', 'Total (RM)', 'Status', 'Payment Method'];
+                        fputcsv($output, $header);
+                        
+                        $totalSales = 0;
+                        foreach ($rows as $row) {
+                            $totalSales += (float)$row['total_amount'];
+                            fputcsv($output, $row);
+                        }
+                        fputcsv($output, []); // Spacer row
+                        fputcsv($output, ['', '', '', '', 'TOTAL', number_format($totalSales, 2), '', '']);
                         fclose($output);
                         exit;
                     } catch (PDOException $e) { $message = "Error generating report: " . $e->getMessage(); }
@@ -405,7 +436,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 // Fetch statistics
 $totalUsers = $adminUsers = $regularUsers = $totalOrders = $totalRevenue = $pendingOrdersCount = $totalSalesToday = $activeOrdersCount = $newReviewsCount = 0;
-$allUsers = $recentOrders = $inventoryItems = $ordersItemsMap = [];
+$allUsers = $recentOrders = $inventoryItems = $ordersItemsMap = $allBranches = [];
 $chartLabels = []; $chartValues = []; $reviews = []; $bestSellers = []; $salesByCategory = [];
 try {
     // Total users
@@ -613,6 +644,12 @@ try {
     // Fetch Store Status
     $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'store_status'");
     $storeStatus = $stmt->fetchColumn() ?: 'open';
+
+    // Fetch all branches for settings
+    try {
+        $stmt = $pdo->query("SELECT * FROM branches ORDER BY name ASC");
+        $allBranches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {}
 
     // Fetch last login for current user
     $currentUserLastLogin = 'Never';
@@ -1324,31 +1361,18 @@ try {
 
             <!-- Side Card -->
             <div class="premium-card" style="grid-column: span 4;">
-                <h3 style="margin:0 0 15px 0; color: #ffffff;">📊 Sales by Category</h3>
-                <?php if (empty($salesByCategory)): ?>
-                    <div class="empty-state" style="padding: 10px 0;">
-                        <div class="empty-icon">💰</div>
-                        <h3>No Sales Data</h3>
-                        <p>No completed sales found.</p>
+                <h3 style="margin:0 0 20px 0; color: #ffffff;">📊 Sales by Category</h3>
+                <div style="height: 400px; width: 100%; position: relative;">
+                    <?php if (empty($pieData) || array_sum($pieData) == 0): ?>
+                        <div class="empty-state" style="padding: 80px 0;">
+                            <div class="empty-icon" style="font-size: 50px;">🍩</div>
+                            <h3>No Sales Data</h3>
+                            <p>No sales in the selected period.</p>
+                        </div>
+                    <?php else: ?>
+                        <canvas id="categoryDonutChart"></canvas>
+                    <?php endif; ?>
                     </div>
-                <?php else: ?>
-                    <table class="admin-table" style="border-spacing: 0 10px;">
-                        <tbody>
-                            <?php 
-                            $totalCategorySales = array_sum(array_column($salesByCategory, 'category_sales'));
-                            foreach ($salesByCategory as $cat): 
-                                $percentage = $totalCategorySales > 0 ? ($cat['category_sales'] / $totalCategorySales) * 100 : 0;
-                            ?>
-                            <tr>
-                                <td style="padding: 5px 0; border:none;">
-                                    <span class="role-badge" style="text-transform: capitalize; background: rgba(99, 102, 241, 0.2); color: #a5b4fc;"><?php echo htmlspecialchars($cat['category']); ?></span>
-                                </td>
-                                <td class="text-right" style="font-weight: 700; font-size: 14px; padding: 5px 0; border:none; color: #ffffff;">RM <?php echo number_format($cat['category_sales'], 2); ?></td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -1915,7 +1939,14 @@ try {
                     <input type="date" name="report_end" value="<?php echo $reportEnd; ?>" style="padding:8px; border-radius:5px; border:1px solid rgba(255,255,255,0.1); background:#373359; color:white; color-scheme:dark;">
                 </div>
                 <button type="submit" class="btn-primary" style="height:38px; margin-top:14px;">Filter</button>
-                <button type="button" onclick="window.open('print_report.php?start=<?php echo $reportStart; ?>&end=<?php echo $reportEnd; ?>', '_blank')" class="btn-primary" style="height:38px; margin-top:14px; background: #111; border: 1px solid #ff5100; color: #ff5100;"><i class="fas fa-print"></i> Print Report</button>
+                <button type="button" onclick="window.open('print_report.php?start=<?php echo $reportStart; ?>&end=<?php echo $reportEnd; ?>', '_blank')" class="btn-primary" style="height:38px; margin-top:14px; background: #c0392b; border-color: #c0392b;"><i class="fas fa-file-pdf"></i> Export PDF</button>
+                <!-- Excel Export Form -->
+                <form method="POST" style="margin:0; display:inline-block;">
+                    <input type="hidden" name="action" value="export_report">
+                    <input type="hidden" name="start_date" value="<?php echo $reportStart; ?>">
+                    <input type="hidden" name="end_date" value="<?php echo $reportEnd; ?>">
+                    <button type="submit" class="btn-primary" style="height:38px; margin-top:14px; background: #166534; border-color: #166534;"><i class="fas fa-file-excel"></i> Export Excel</button>
+                </form>
             </form>
             <div class="filter-pills" style="margin:0;">
                 <a href="?view=reports&report_start=<?php echo date('Y-m-d'); ?>&report_end=<?php echo date('Y-m-d'); ?>" class="filter-pill">Today</a>
@@ -2093,20 +2124,28 @@ try {
     <!-- VIEW: SETTINGS -->
     <div id="view-settings" class="view-section">
         <div class="panel-card">
-            <h3 style="margin-top:0; color: #ffffff;">⚙️ System Settings</h3>
+            <h3 style="margin-top:0; color: #ffffff;">🏪 Branch Status Management</h3>
+            <p style="margin:5px 0 20px 0; font-size:13px; color:#a0aec0;">Toggle to "Closed" to disable customer ordering for a specific branch.</p>
             
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:20px; background:#1d1a2f; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
-                <div>
-                    <h4 style="margin:0; color: #ffffff;">Store Status</h4>
-                    <p style="margin:5px 0 0 0; font-size:13px; color:#a0aec0;">Toggle to "Closed" to disable customer ordering.</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <?php foreach($allBranches as $branch): 
+                    $isOpen = (int)$branch['is_open'] === 1;
+                ?>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:#1d1a2f; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
+                    <div>
+                        <h4 style="margin:0; color: #ffffff;"><?php echo htmlspecialchars($branch['name']); ?></h4>
+                        <p style="margin:5px 0 0 0; font-size:13px; color: <?php echo $isOpen ? '#22c55e' : '#ef4444'; ?>;">
+                            <?php echo $isOpen ? '● Open' : '● Closed'; ?>
+                        </p>
+                    </div>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="toggle_branch_status">
+                        <input type="hidden" name="branch_id" value="<?php echo $branch['id']; ?>">
+                        <input type="hidden" name="status" value="<?php echo $isOpen ? '0' : '1'; ?>">
+                        <label class="switch"><input type="checkbox" onchange="this.form.submit()" <?php echo $isOpen ? 'checked' : ''; ?>><span class="slider"></span></label>
+                    </form>
                 </div>
-                <form method="POST">
-                    <input type="hidden" name="action" value="toggle_store">
-                    <label class="switch">
-                        <input type="checkbox" name="status" value="open" onchange="this.form.submit()" <?php echo $storeStatus == 'open' ? 'checked' : ''; ?>>
-                        <span class="slider"></span>
-                    </label>
-                </form>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>

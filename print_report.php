@@ -101,7 +101,7 @@ try {
         .report-meta strong { color: #fff; }
 
         /* Cards */
-        .stats-grid { display: grid; grid-template-columns: repeat(rus: 10px; border: 1px solid #333; text-align: center; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .stat-label { color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
         .stat-value { font-size: 24px; font-weight: bold; color: #ff5100; }
 
@@ -111,7 +111,7 @@ try {
         
         table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }
         th { text-align: left; padding: 12px; background: #2a2a2a; color: #ff5100; border-bottom: 2px solid #ff5100; font-size: 11px; text-transform: uppercase; }
-        td { padding: 12px; border-bottom: 1px solid #333; color: #ddd; }{
+        td { padding: 12px; border-bottom: 1px solid #333; color: #ddd; }
         .text-right { text-align: right; }
 
         /* Print Button */
@@ -191,11 +191,28 @@ try {
                 <canvas id="catChart"></canvas>
             </div>
         </div>
+    </div>    
+    <div class="panel-card">
+        <h3 class="panel-header">🏆 Top Selling Products</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th class="text-right">Quantity Sold</th>
+                    <th class="text-right">Total Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach($topProducts as $p): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($p['item_name']); ?></td>
+                    <td class="text-right"><?php echo number_format($p['total_qty']); ?></td>
+                    <td class="text-right">RM <?php echo number_format($p['total_revenue'], 2); ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
     </div>
-vead>
-      x
-?php endforeach; ?>
-    <
     <div class="panel-card">
         <h3 class="panel-header">💳 Payment Methods</h3>
         <table>
@@ -215,8 +232,27 @@ vead>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
-        <
-    fill: true,
+        </table>
+    </div>
+    
+    <div style="text-align:center; color:#555; font-size:12px; margin-top:40px; border-top:1px solid #333; padding-top:20px;">
+        &copy; <?php echo date('Y'); ?> BamBam Burger Admin System. Internal Use Only.
+    </div>
+
+</div> <!-- end report-container -->
+
+<script>
+    // Trend Chart
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: <?php echo json_encode($trendLabels); ?>,
+            datasets: [{
+                label: 'Revenue',
+                data: <?php echo json_encode($trendRevenue); ?>,
+                borderColor: '#ff5100',
+                backgroundColor: 'rgba(255, 81, 0, 0.1)',
+                fill: true,
                 tension: 0.3
             }]
         },
@@ -251,5 +287,4 @@ vead>
     });
 </script>
 
-</body>
-</html>
+</body></html>

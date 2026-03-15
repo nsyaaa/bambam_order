@@ -36,6 +36,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $pdo->beginTransaction();
 
+        // Server-side validation: Check if branch is open
+        $branchName = $_POST['branch'] ?? 'Kangar';
+        $stmtBranch = $pdo->prepare("SELECT is_open FROM branches WHERE name = ?");
+        $stmtBranch->execute([$branchName]);
+        $branchStatus = $stmtBranch->fetchColumn();
+
+        if ($branchStatus === 0 || $branchStatus === '0') {
+            throw new Exception("The selected branch ($branchName) is currently closed and cannot accept orders.");
+        }
+
+
         // 1. Handle File Upload (Receipt)
         $fileName = null;
         if (isset($_FILES['payment_proof']) && $_FILES['payment_proof']['error'] === UPLOAD_ERR_OK) {
