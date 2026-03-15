@@ -119,14 +119,35 @@ try {
         .btn-print { background: #ff5100; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; }
         .btn-print:hover { background: #e04600; }
 
+        /* --- PRINT OPTIMIZED STYLES --- */
         @media print {
-            .no-print { display: none; }
-            body { background-color: #fff; color: #000; }
-            .stat-card, .chart-wrapper { background: #fff; border: 1px solid #ccc; color: #000; }
-            .stat-value, .brand, .section-title, th { color: #000 !important; }
+            .no-print, .charts-grid, script {
+                display: none !important;
+            }
+            body {
+                background-color: #fff !important;
+                color: #000 !important;
+                padding: 0;
+                font-size: 10pt;
+            }
+            .report-container {
+                max-width: 100%;
+                box-shadow: none;
+                margin: 0;
+                padding: 10mm;
+            }
+            .panel-card, .stat-card {
+                border: 1px solid #ccc;
+                box-shadow: none;
+                background: #fff !important;
+                break-inside: avoid;
+            }
+            .stat-value, .brand, .section-title, .panel-header, th, td {
+                color: #000 !important;
+            }
             .report-header, th { border-color: #000 !important; }
-            td { border-color: #eee; color: #000; }
-            tr:nth-child(even) { background: #f9f9f9; }
+            th { background: #eee !important; }
+            td { border-color: #ccc; }
         }
 
         /* Panel style for consistency with admin.php */
@@ -178,7 +199,7 @@ try {
         </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+    <div class="charts-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
         <div>
             <div class="section-title">Revenue Trend</div>
             <div class="chart-wrapper">

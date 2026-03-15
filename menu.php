@@ -39,32 +39,6 @@ foreach ($results as $row) {
     $menuItems[$row['category']][] = $row;
 }
 
-// Manually add new items that are not in the database yet
-$menuItems['burger'][] = [
-    'id' => 10002,
-    'category' => 'burger',
-    'name' => 'Burger Mix XL', 
-    'description' => 'Combined proteins standard',
-    'price' => 12.00,
-    'has_protein' => 0,
-    'variants' => json_encode([
-        ['name' => 'Single', 'price' => 12.00],
-        ['name' => 'Double', 'price' => 18.00],
-        ['name' => 'Triple', 'price' => 24.00]
-    ]),
-    'created_at' => date('Y-m-d H:i:s')
-];
-$menuItems['burger'][] = [
-    'id' => 10001,
-    'category' => 'burger',
-    'name' => 'Burger Kambing', 
-    'description' => 'Juicy lamb patty with special herbs and spices.',
-    'price' => 16.00,
-    'has_protein' => 0,
-    'variants' => null,
-    'created_at' => date('Y-m-d H:i:s')
-];
-
 // Prepare Data for JavaScript (Variants & Protein info)
 $jsMenuData = [];
 $categories = ['burger', 'special', 'addon', 'minuman'];
