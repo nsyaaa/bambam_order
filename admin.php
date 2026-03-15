@@ -383,9 +383,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             case 'fetch_chart_data':
                 if (isset($_POST['period'])) {
                     $period = $_POST['period'];
-                    $labels = []; $data = [];
+                    $labels = []; $data = []; $labelFormat = '';
                     try {
-                        if ($period === 'day') {
+                        if ($period === 'custom' && isset($_POST['start_date'], $_POST['end_date'])) {
+                            $start = $_POST['start_date'];
+                            $end = $_POST['end_date'];
+                            $dateDiff = (new DateTime($end))->diff(new DateTime($start))->days;
+
+                            if ($dateDiff > 90) { // Group by month for long ranges
+                                $groupBy = "DATE_FORMAT(created_at, '%Y-%m')";
+                                $labelFormat = 'M Y';
+                            } else { // Group by day for shorter ranges
+                                $groupBy = "DATE(created_at)";
+                                $labelFormat = 'd M';
+                            }
+                            $stmt = $pdo->prepare("SELECT $groupBy as label, SUM(total_amount) as total FROM orders WHERE status IN ('Served', 'Completed') AND created_at BETWEEN ? AND ? GROUP BY label ORDER BY MIN(created_at)");
+                            $stmt->execute([$start . ' 00:00:00', $end . ' 23:59:59']);
+                        } elseif ($period === 'day') {
                             $stmt = $pdo->query("SELECT DATE_FORMAT(created_at, '%l %p') as label, SUM(total_amount) as total FROM orders WHERE status IN ('Served', 'Completed') AND DATE(created_at) = CURDATE() GROUP BY HOUR(created_at) ORDER BY MIN(created_at)");
                         } elseif ($period === 'week') {
                             $stmt = $pdo->query("SELECT DATE_FORMAT(created_at, '%d %b') as label, SUM(total_amount) as total FROM orders WHERE status IN ('Served', 'Completed') AND created_at >= DATE(NOW()) - INTERVAL 7 DAY GROUP BY DATE(created_at) ORDER BY MIN(created_at)");
@@ -393,11 +407,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             $stmt = $pdo->query("SELECT DATE_FORMAT(created_at, '%d %b') as label, SUM(total_amount) as total FROM orders WHERE status IN ('Served', 'Completed') AND MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE()) GROUP BY DATE(created_at) ORDER BY MIN(created_at)");
                         } elseif ($period === 'year') {
                             $stmt = $pdo->query("SELECT DATE_FORMAT(created_at, '%M') as label, SUM(total_amount) as total FROM orders WHERE status IN ('Served', 'Completed') AND YEAR(created_at) = YEAR(CURRENT_DATE()) GROUP BY MONTH(created_at) ORDER BY MONTH(created_at)");
+                        } else {
+                            // Default to week if period is invalid
+                            $stmt = $pdo->query("SELECT DATE_FORMAT(created_at, '%d %b') as label, SUM(total_amount) as total FROM orders WHERE status IN ('Served', 'Completed') AND created_at >= DATE(NOW()) - INTERVAL 7 DAY GROUP BY DATE(created_at) ORDER BY MIN(created_at)");
                         }
                         
                         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         foreach ($rows as $row) {
-                            $labels[] = $row['label'];
+                            $labels[] = ($period === 'custom' && $labelFormat) ? date($labelFormat, strtotime($row['label'])) : $row['label'];
                             $data[] = (float)$row['total'];
                         }
                         ob_end_clean();
@@ -1329,11 +1346,17 @@ try {
                     <h3 style="margin:0; color: #ffffff;">📈 Sales Analytics</h3>
                     <div>
                         <button onclick="updateChart('day', this)" class="chart-filter-btn">Today</button>
-                        <button onclick="updateChart('week', this)" class="chart-filter-btn active">Week</button>
-                        <button onclick="updateChart('month', this)" class="chart-filter-btn">Month</button>
-                        <button onclick="updateChart('year', this)" class="chart-filter-btn">Year</button>
-                        <button class="chart-filter-btn" title="Select Date Range"><i class="fas fa-calendar-alt"></i></button>
+                        <button onclick="updateChart('week', this)" class="chart-filter-btn active">This Week</button>
+                        <button onclick="updateChart('month', this)" class="chart-filter-btn">This Month</button>
+                        <button onclick="updateChart('year', this)" class="chart-filter-btn">This Year</button>
+                        <button onclick="toggleDateRangePicker(this)" class="chart-filter-btn" title="Select Date Range"><i class="fas fa-calendar-alt"></i></button>
                     </div>
+                </div>
+                <div id="custom-date-picker-container" style="display: none; background: #2a2a2a; padding: 10px; border-radius: 8px; margin-top: 10px; max-width: fit-content; gap: 10px; align-items: center;">
+                    <label for="chart-start-date" style="font-size:12px;">From:</label>
+                    <input type="date" id="chart-start-date" style="background:#333; border:1px solid #444; color:white; padding:5px; border-radius:4px; color-scheme: dark;">
+                    <label for="chart-end-date" style="font-size:12px;">To:</label>
+                    <input type="date" id="chart-end-date" style="background:#333; border:1px solid #444; color:white; padding:5px; border-radius:4px; color-scheme: dark;">
                 </div>
                 <div style="height: 400px; width: 100%;">
                     <canvas id="salesChart"></canvas>
@@ -2461,15 +2484,36 @@ const salesChart = new Chart(ctx, {
     }
 });
 
-function updateChart(period, btn) {
-    if(btn) {
+function toggleDateRangePicker(btn) {
+    const picker = document.getElementById('custom-date-picker-container');
+    const isActive = picker.style.display === 'flex';
+    if (isActive) {
+        picker.style.display = 'none';
+        btn.classList.remove('active');
+    } else {
+        picker.style.display = 'flex';
         document.querySelectorAll('.chart-filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+    }
+}
+
+function updateChart(period, btn, startDate = null, endDate = null) {
+    if (btn) {
+        document.querySelectorAll('.chart-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        // Hide custom date picker if a preset button is clicked
+        if (period !== 'custom') {
+            document.getElementById('custom-date-picker-container').style.display = 'none';
+        }
     }
 
     const formData = new FormData();
     formData.append('action', 'fetch_chart_data');
     formData.append('period', period);
+    if (period === 'custom' && startDate && endDate) {
+        formData.append('start_date', startDate);
+        formData.append('end_date', endDate);
+    }
 
     fetch('admin.php', { method: 'POST', body: formData })
     .then(response => response.json())
@@ -2768,6 +2812,20 @@ document.addEventListener('DOMContentLoaded', function() {
         setInterval(() => {
             fetchDailySales(datePicker.value);
         }, 30000); // Auto-update every 30 seconds
+    }
+
+    // Initialize Sales Analytics Date Range Picker
+    const startDateInput = document.getElementById('chart-start-date');
+    const endDateInput = document.getElementById('chart-end-date');
+    if (startDateInput && endDateInput) {
+        const updateFromRange = () => {
+            if (startDateInput.value && endDateInput.value) {
+                // The button is the calendar icon, which should be active
+                updateChart('custom', document.querySelector('.chart-filter-btn[title="Select Date Range"]'), startDateInput.value, endDateInput.value);
+            }
+        };
+        startDateInput.addEventListener('change', updateFromRange);
+        endDateInput.addEventListener('change', updateFromRange);
     }
 });
 
