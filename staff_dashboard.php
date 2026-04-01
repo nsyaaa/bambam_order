@@ -1,10 +1,20 @@
 <?php
 session_start();
-if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== true) {
+
+if (
+    !isset($_SESSION['staff_logged_in']) ||
+    $_SESSION['staff_logged_in'] !== true ||
+    !isset($_SESSION['branch_id']) ||
+    !isset($_SESSION['branch_name'])
+) {
     header("Location: staff_login.php");
     exit;
 }
+
+$branch_id = $_SESSION['branch_id'];
+$branch_name = $_SESSION['branch_name'];
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,18 +29,18 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
         --primary-hover: #e04600;
         --dark: #333;
         --light: #f4f6f8;
-        --white: #ffffff;
-        --gray: #e0e0e0;
+        --white: #2d2d2d; /* Tukar kepada warna sidebar */
+        --gray: #444444;
         --success: #2ecc71;
         --warning: #f1c40f;
         --danger: #e74c3c;
-        --text-main: #2c3e50;
-        --text-muted: #7f8c8d;
+        --text-main: #ffffff;
+        --text-muted: #aaaaaa;
     }
     body {
         margin: 0;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: var(--light);
+        background: black;
         color: var(--text-main);
         display: flex;
         height: 100vh;
@@ -40,7 +50,7 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
     /* SIDEBAR */
     .sidebar {
         width: 260px;
-        background: var(--white);
+        background: #2d2d2d;
         border-right: 1px solid var(--gray);
         display: flex;
         flex-direction: column;
@@ -58,7 +68,7 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
     }
     .nav-item {
         padding: 15px;
-        color: var(--text-main);
+        color: white;
         text-decoration: none;
         display: flex;
         align-items: center;
@@ -81,6 +91,16 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
         overflow-y: auto;
         display: flex;
         flex-direction: column;
+    }
+
+    /* Perubahan warna tajuk utama kepada putih */
+    .view-section h2, .view-section h3 {
+        color: white;
+    }
+
+    /* Tajuk di dalam panel kini juga berwarna putih kerana latar belakang sudah gelap */
+    .panel-card h2, .panel-card h3 {
+        color: white;
     }
 
     /* HEADER */
@@ -175,7 +195,7 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
     .order-id { font-weight: 800; font-size: 20px; color: var(--primary); }
     .order-time { color: var(--text-muted); font-size: 14px; display: flex; align-items: center; gap: 5px; }
     
-    .order-items { margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 10px; }
+    .order-items { margin-bottom: 20px; background: #3d3d3d; padding: 15px; border-radius: 10px; }
     .order-item { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px; font-weight: 500; }
     .order-item:last-child { margin-bottom: 0; }
     .item-variant { color: var(--text-muted); font-size: 13px; margin-left: 5px; }
@@ -211,7 +231,7 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
         margin-bottom: 30px;
     }
     .branch-card {
-        background: white;
+        background: var(--white);
         padding: 15px;
         border-radius: 10px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -279,7 +299,7 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
         cursor: pointer;
         text-align: left;
         display: flex; align-items: center; gap: 15px;
-        background: #f8f9fa;
+        background: #3d3d3d;
         color: var(--text-main);
         transition: 0.2s;
         font-size: 14px;
@@ -287,7 +307,7 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
     .quick-btn:hover { background: #e9ecef; color: var(--primary); }
     .quick-btn i { color: var(--primary); font-size: 18px; width: 25px; text-align: center; }
 
-    .stock-item { display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #eee; align-items: center; }
+    .stock-item { display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #444; align-items: center; }
     .stock-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
     .stock-name { font-weight: 500; font-size: 14px; }
     .stock-status { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 700; text-transform: uppercase; }
@@ -305,7 +325,7 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
     .clock-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; font-size: 13px; }
     .btn-in { background: var(--success); }
     .btn-out { background: var(--danger); }
-    .clock-history { margin-top: 20px; text-align: left; max-height: 200px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 10px; }
+    .clock-history { margin-top: 20px; text-align: left; max-height: 200px; overflow-y: auto; border-top: 1px solid #444; padding-top: 10px; }
     .clock-entry { font-size: 13px; padding: 5px 0; border-bottom: 1px solid #f9f9f9; display: flex; justify-content: space-between; }
 
     /* Prep Suggestions */
@@ -321,7 +341,7 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
 
     /* Staff Table */
     .staff-table { width: 100%; border-collapse: collapse; }
-    .staff-table th, .staff-table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+    .staff-table th, .staff-table td { padding: 12px; text-align: left; border-bottom: 1px solid #444; }
     .staff-status-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
     .status-in { background: #d4edda; color: #155724; }
     .status-out { background: #f8d7da; color: #721c24; }
@@ -361,8 +381,8 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
     <!-- TOP HEADER -->
     <header class="top-header">
         <div class="user-info">
-            <h2>Hello, Sya (Kitchen Staff)</h2>
-            <p><i class="far fa-clock"></i> Shift: Afternoon (2:00 PM – 10:00 PM)</p>
+            <h2>Hello, Staff <?php echo htmlspecialchars($branch_name); ?></h2>
+            <p><i class="fas fa-store"></i> Branch: <?php echo htmlspecialchars($branch_name); ?></p>
         </div>
         <div class="header-actions">
             <div id="connection-indicator" class="connection-status status-online">
@@ -430,14 +450,9 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
                     <button class="filter-btn" onclick="filterOrders('Ready')">Ready</button>
                     <button class="filter-btn" onclick="filterOrders('Served')">Served</button>
                 </div>
-                <select id="dashboard-branch-filter" class="report-filter" style="width:auto; margin:0;" onchange="filterOrdersByBranch(this.value)">
-                    <option value="All">All Branches</option>
-                    <option value="Kangar">Kangar</option>
-                    <option value="Jejawi">Jejawi</option>
-                    <option value="Arau">Arau</option>
-                    <option value="Kuala Perlis">Kuala Perlis</option>
-                    <option value="Beseri">Beseri</option>
-                </select>
+                <div style="padding:10px 15px; background:#3d3d3d; border-radius:10px; font-weight:bold; color:white;">
+                    Branch: <?php echo htmlspecialchars($branch_name); ?>
+                </div>
             </div>
             
             <div id="orders-list">
@@ -499,10 +514,10 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
             <h2 style="margin:0;">Order History</h2>
             <input type="date" id="history-date-filter" onchange="loadOrderHistory()" style="padding:8px; border:1px solid #ccc; border-radius:5px;">
         </div>
-        <div style="background:white; padding:20px; border-radius:15px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">
+        <div style="background:var(--white); padding:20px; border-radius:15px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">
             <table style="width:100%; border-collapse:collapse;">
                 <thead>
-                    <tr style="background:#f8f9fa; text-align:left;">
+                    <tr style="background:#3d3d3d; text-align:left;">
                         <th style="padding:15px; border-radius:10px 0 0 10px;">ID</th>
                         <th style="padding:15px;">Date</th>
                         <th style="padding:15px;">Items</th>
@@ -525,7 +540,7 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
             <button onclick="addNewStockItem()" style="padding:10px 20px; background:#3498db; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">+ Add New Item</button>
         </div>
         
-        <div style="display:flex; gap:15px; margin-bottom:20px; background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+        <div style="display:flex; gap:15px; margin-bottom:20px; background:var(--white); padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
             <input type="text" id="stock-search" class="search-bar" placeholder="🔍 Search item..." style="margin:0; flex:1;" onkeyup="loadStock()">
             <select id="stock-filter" class="report-filter" style="width:auto; margin:0; min-width:150px;" onchange="loadStock()">
                 <option value="All">All Status</option>
@@ -538,7 +553,7 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
         <div class="panel-card" style="padding:0; overflow:hidden;">
             <table style="width:100%; border-collapse:collapse;">
                 <thead>
-                    <tr style="background:#f8f9fa; text-align:left; border-bottom:2px solid #eee;">
+                    <tr style="background:#3d3d3d; text-align:left; border-bottom:2px solid #444;">
                         <th style="padding:15px;">Item</th>
                         <th style="padding:15px;">Stock Level</th>
                         <th style="padding:15px;">Status</th>
@@ -569,7 +584,7 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
         <div class="panel-card" style="padding:0; overflow:hidden;">
             <table class="staff-table">
                 <thead>
-                    <tr style="background:#f8f9fa;">
+                    <tr style="background:#3d3d3d;">
                         <th>Name</th>
                         <th>Branch</th>
                         <th>Role</th>
@@ -592,7 +607,7 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
             <p>Phone: +60 12-345 6789</p>
             <button class="action-btn btn-prepare" style="margin-top:20px;">Edit Profile</button>
             
-            <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+            <div style="margin-top: 30px; border-top: 1px solid #444; padding-top: 20px;">
                 <div style="margin-bottom:15px; text-align:left;">
                     <label style="font-size:12px; color:#777; font-weight:bold;">Filter History by Date:</label>
                     <input type="date" id="clock-date-filter" onchange="loadClockHistory()" style="padding:8px; border:1px solid #ccc; border-radius:5px; width:100%; margin-top:5px;">
@@ -621,7 +636,9 @@ if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_logged_in'] !== tru
 
 <script>
 let currentFilter = 'All';
-let currentBranchFilter = 'All';
+let currentBranchFilter = <?php echo json_encode($branch_name); ?>;
+const currentBranchId = <?php echo json_encode($branch_id); ?>;
+
 
 document.addEventListener('DOMContentLoaded', () => {
     loadOrders();
@@ -654,8 +671,7 @@ function filterOrders(status) {
 }
 
 function filterOrdersByBranch(branch) {
-    currentBranchFilter = branch;
-    loadOrders();
+    return;
 }
 
 let allOrders = []; // Global storage for orders
@@ -663,7 +679,7 @@ let allOrders = []; // Global storage for orders
 function loadOrders() {
     const container = document.getElementById('orders-list');
     
-    fetch('get_dashboard_data.php')
+    fetch('get_dashboard_data.php?branch_id=' + encodeURIComponent(currentBranchId))
         .then(response => response.json())
         .then(orders => {
             allOrders = orders; // Store for other functions
@@ -707,7 +723,7 @@ function loadOrders() {
 
                 // Apply Filter
                 if (currentFilter !== 'All' && order.status !== currentFilter) return;
-                if (currentBranchFilter !== 'All' && order.branch !== currentBranchFilter) return;
+                if (order.branch !== currentBranchFilter) return;
                 if (currentFilter === 'All' && order.status === 'Served') return;
 
                 // Payment Status Logic
@@ -807,7 +823,7 @@ function loadOrderHistory() {
         hasData = true;
         const itemsSummary = order.items.map(i => `${i.qty}x ${i.name}`).join(', ');
         tbody.innerHTML += `
-            <tr style="border-bottom:1px solid #eee;">
+            <tr style="border-bottom:1px solid #444;">
                 <td style="padding:15px;">#${order.id}</td>
                 <td style="padding:15px;">${new Date(order.created_at || order.timestamp).toLocaleDateString()}</td>
                 <td style="padding:15px;">${itemsSummary}</td>
@@ -876,38 +892,34 @@ function confirmPayment(id) {
 }
 
 function loadBranchOverview() {
-    const branches = ['Kangar', 'Jejawi', 'Arau', 'Kuala Perlis', 'Beseri'];
     const orders = allOrders;
     const container = document.getElementById('branch-overview-container');
     container.innerHTML = '';
 
-    // Calculate today's stats
     const today = new Date().toLocaleDateString();
+    let count = 0;
+    let sales = 0;
 
-    branches.forEach(branch => {
-        let count = 0;
-        let sales = 0;
-        
-        orders.forEach(o => {
-            const oDate = new Date(o.created_at || o.timestamp).toLocaleDateString();
-            // Use default branch if missing in DB
-            const oBranch = o.branch || 'Main';
-            if (oBranch === branch && oDate === today) {
-                count++;
-                sales += parseFloat(o.total || o.total_amount);
-            }
-        });
+    orders.forEach(o => {
+        const oDate = new Date(o.created_at || o.timestamp).toLocaleDateString();
+        const oBranch = o.branch || 'Main';
 
-        container.innerHTML += `
-            <div class="branch-card open">
-                <div class="branch-name">
-                    ${branch} <span style="font-size:11px; padding:2px 6px; background:#d4edda; color:#155724; border-radius:4px;">Open</span>
-                </div>
-                <div class="branch-stat">Orders Today: <strong>${count}</strong></div>
-                <div class="branch-stat">Daily Sales: <strong>RM ${sales.toFixed(2)}</strong></div>
-            </div>
-        `;
+        if (oBranch === currentBranchFilter && oDate === today) {
+            count++;
+            sales += parseFloat(o.total || o.total_amount || 0);
+        }
     });
+
+    container.innerHTML = `
+        <div class="branch-card open">
+            <div class="branch-name">
+                ${currentBranchFilter}
+                <span style="font-size:11px; padding:2px 6px; background:#d4edda; color:#155724; border-radius:4px;">Open</span>
+            </div>
+            <div class="branch-stat">Orders Today: <strong>${count}</strong></div>
+            <div class="branch-stat">Daily Sales: <strong>RM ${sales.toFixed(2)}</strong></div>
+        </div>
+    `;
 }
 
 // === STOCK LOGIC ===
@@ -953,7 +965,7 @@ function loadStock() {
         }
 
         container.innerHTML += `
-            <tr style="border-bottom:1px solid #eee;">
+            <tr style="border-bottom:1px solid #444;">
                 <td style="padding:15px; font-weight:500;">${item.name}</td>
                 <td style="padding:15px;">
                     ${item.level} 
@@ -1111,7 +1123,7 @@ function loadShifts() {
     let html = `
         <table style="width:100%; border-collapse:collapse;">
             <thead>
-                <tr style="background:#f8f9fa; text-align:left; border-bottom:2px solid #eee;">
+                <tr style="background:#3d3d3d; text-align:left; border-bottom:2px solid #444;">
                     <th style="padding:10px; width:50px; text-align:center;">Work</th>
                     <th style="padding:10px;">Day</th>
                     <th style="padding:10px;">Date</th>
@@ -1159,7 +1171,7 @@ function loadShifts() {
             : `<input type="text" value="${shift.time}" disabled style="width:100%; padding:8px; border-radius:4px; ${inputStyle}">`;
 
         html += `
-            <tr style="border-bottom:1px solid #f0f0f0;">
+            <tr style="border-bottom:1px solid #444;">
                 <td style="padding:10px; text-align:center;">
                     <input type="checkbox" id="shift-active-${index}" ${checked} ${disabled} style="transform:scale(1.2); cursor:pointer;">
                 </td>
@@ -1270,34 +1282,50 @@ function loadClockHistory() {
     }
 }
 
-// === STAFF LIST LOGIC ===
-const mockStaff = [
-    { name: 'Sya', branch: 'Kangar', role: 'Kitchen', status: 'In' },
-    { name: 'Ali', branch: 'Kangar', role: 'Cashier', status: 'In' },
-    { name: 'Abu', branch: 'Jejawi', role: 'Kitchen', status: 'Out' },
-    { name: 'Siti', branch: 'Arau', role: 'Manager', status: 'In' },
-    { name: 'Chong', branch: 'Beseri', role: 'Kitchen', status: 'Out' },
-    { name: 'Muthu', branch: 'Kuala Perlis', role: 'Cashier', status: 'In' }
-];
-
 function loadStaffList() {
     const container = document.getElementById('staff-list-container');
-    container.innerHTML = '';
-    
-    mockStaff.forEach(staff => {
-        const statusClass = staff.status === 'In' ? 'status-in' : 'status-out';
-        const statusText = staff.status === 'In' ? 'Clocked In' : 'Clocked Out';
-        
-        container.innerHTML += `
-            <tr>
-                <td><strong>${staff.name}</strong></td>
-                <td>${staff.branch}</td>
-                <td>${staff.role}</td>
-                <td><span class="staff-status-badge ${statusClass}">${statusText}</span></td>
-            </tr>`;
-    });
-}
+    container.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Loading staff...</td></tr>';
 
+    fetch('get_staff_list.php')
+        .then(response => response.json())
+        .then(result => {
+            console.log('STAFF DEBUG:', result);
+            container.innerHTML = '';
+
+            const staffList = result.data || [];
+
+            if (!staffList.length) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align:center; padding:20px;">
+                            No staff found for this branch.<br>
+                            <small>Branch session: ${result.branch_session || 'N/A'}</small>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            staffList.forEach(staff => {
+                container.innerHTML += `
+                    <tr>
+                        <td><strong>${staff.name}</strong></td>
+                        <td>${staff.branch}</td>
+                        <td>${staff.role}</td>
+                        <td><span class="staff-status-badge status-in">Active</span></td>
+                    </tr>
+                `;
+            });
+        })
+        .catch(error => {
+            console.error('Error loading staff:', error);
+            container.innerHTML = `
+                <tr>
+                    <td colspan="4" style="text-align:center; padding:20px;">Failed to load staff.</td>
+                </tr>
+            `;
+        });
+}
 // Listen for storage changes from other tabs (Instant Update)
 window.addEventListener('storage', loadOrders);
 window.addEventListener('online', updateOnlineStatus);

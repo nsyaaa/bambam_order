@@ -11,10 +11,51 @@ if (isset($_GET['action']) && $_GET['action'] == 'logout') {
 // Handle Login
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $password = $_POST['password'];
-    // Hardcoded password: admin123
-    if ($password === 'admin123') {
+    $password = $_POST['password'] ?? '';
+
+    // Password ikut branch
+    $branches = [
+        [
+            'id' => 1,
+            'name' => 'Kangar',
+            'password' => 'kangar1234'
+        ],
+        [
+            'id' => 2,
+            'name' => 'Arau',
+            'password' => 'arau1234'
+        ],
+        [
+            'id' => 3,
+            'name' => 'Jejawi',
+            'password' => 'jejawi1234'
+        ],
+        [
+            'id' => 4,
+            'name' => 'Kuala Perlis',
+            'password' => 'kualaperlis1234'
+        ],
+        [
+            'id' => 5,
+            'name' => 'Beseri',
+            'password' => 'beseri1234'
+        ]
+    ];
+
+    $matchedBranch = null;
+
+    foreach ($branches as $branch) {
+        if ($password === $branch['password']) {
+            $matchedBranch = $branch;
+            break;
+        }
+    }
+
+    if ($matchedBranch) {
         $_SESSION['staff_logged_in'] = true;
+        $_SESSION['branch_id'] = $matchedBranch['id'];
+        $_SESSION['branch_name'] = $matchedBranch['name'];
+
         header("Location: staff_dashboard.php");
         exit;
     } else {
@@ -87,8 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <button type="submit">Access Dashboard</button>
     </form>
     
-    <div style="font-size:12px; color:#555; margin-top:20px;">(Default: admin123)</div>
-    <a href="index.php" class="back-link">&larr; Back to Website</a>
+    <div style="font-size:12px; color:#555; margin-top:20px;">Enter your branch access code</div>
 </div>
 
 </body>

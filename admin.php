@@ -120,46 +120,52 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
                 break;
             
-            case 'create_user':
-                if (isset($_POST['name'], $_POST['email'], $_POST['password'], $_POST['role'])) {
-                    try {
-                        $passHash = password_hash($_POST['password'], PASSWORD_DEFAULT);
-                        $stmt = $pdo->prepare("INSERT INTO users (name, gmail, phone, password, role) VALUES (?, ?, ?, ?, ?)");
-                        $stmt->execute([$_POST['name'], $_POST['email'], $_POST['phone'] ?? '', $passHash, $_POST['role']]);
-                        $message = "New " . htmlspecialchars($_POST['role']) . " created successfully!";
-                        logActivity($pdo, $currentUserId, $currentUserName, "Create User", "Created {$_POST['role']}: {$_POST['name']}");
-                    } catch (PDOException $e) {
-                        $message = "Error creating user: " . $e->getMessage();
-                    }
-                }
-                break;
-                
-            case 'delete_user':
-                if (isset($_POST['user_id'])) {
-                    try {
-                        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ? AND id != ?");
-                        $stmt->execute([$_POST['user_id'], $currentUserId]); // Prevent admin self-deletion
-                        $message = "User deleted successfully!";
-                        logActivity($pdo, $currentUserId, $currentUserName, "Delete User", "Deleted User ID {$_POST['user_id']}");
-                    } catch (PDOException $e) {
-                        $message = "Error deleting user: " . $e->getMessage();
-                    }
-                }
-                break;
+         case 'create_user':
+    if (isset($_POST['name'], $_POST['email'], $_POST['role'], $_POST['branch'])) {
+        try {
+            $stmt = $pdo->prepare("INSERT INTO staff (name, email, phone, role, branch) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $_POST['name'],
+                $_POST['email'],
+                $_POST['phone'] ?? '',
+                $_POST['role'],
+                $_POST['branch']
+            ]);
 
-            case 'reset_user_password':
-                if ($isSuperAdmin && isset($_POST['user_id'], $_POST['new_password'])) {
-                    try {
-                        $passHash = password_hash($_POST['new_password'], PASSWORD_DEFAULT);
-                        $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
-                        $stmt->execute([$passHash, $_POST['user_id']]);
-                        $message = "Password for user ID {$_POST['user_id']} has been reset.";
-                        logActivity($pdo, $currentUserId, $currentUserName, "Reset Password", "Reset password for User ID {$_POST['user_id']}");
-                    } catch (PDOException $e) {
-                        $message = "Error resetting password: " . $e->getMessage();
-                    }
-                }
-                break;
+            $message = "Staff added successfully!";
+            logActivity($pdo, $currentUserId, $currentUserName, "Create Staff", "Added staff {$_POST['name']} to {$_POST['branch']}");
+        } catch (PDOException $e) {
+            $message = "Error creating staff: " . $e->getMessage();
+        }
+    }
+    break;
+                
+case 'delete_user':
+    if (isset($_POST['user_id'])) {
+        try {
+            $stmt = $pdo->prepare("DELETE FROM staff WHERE id = ?");
+            $stmt->execute([$_POST['user_id']]);
+            $message = "Staff deleted successfully!";
+            logActivity($pdo, $currentUserId, $currentUserName, "Delete Staff", "Deleted Staff ID {$_POST['user_id']}");
+        } catch (PDOException $e) {
+            $message = "Error deleting staff: " . $e->getMessage();
+        }
+    }
+    break;
+
+case 'reset_user_password':
+    if ($isSuperAdmin && isset($_POST['user_id'], $_POST['new_password'])) {
+        try {
+            $passHash = password_hash($_POST['new_password'], PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("UPDATE staff SET password = ? WHERE id = ?");
+            $stmt->execute([$passHash, $_POST['user_id']]);
+            $message = "Password for staff ID {$_POST['user_id']} has been reset.";
+            logActivity($pdo, $currentUserId, $currentUserName, "Reset Staff Password", "Reset password for Staff ID {$_POST['user_id']}");
+        } catch (PDOException $e) {
+            $message = "Error resetting password: " . $e->getMessage();
+        }
+    }
+    break;
 
             case 'mark_as_paid':
                 if ($isSuperAdmin || $currentUserRole === 'staff') { // Allow staff to do this
@@ -452,9 +458,9 @@ try {
     // Regular users count
     $stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'user'");
     $regularUsers = $stmt->fetchColumn();
-    // Get staff for management (exclude customers)
-    $stmt = $pdo->query("SELECT id, name, gmail, phone, role, created_at, last_login FROM users WHERE role != 'user' ORDER BY created_at DESC");
-    $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Get staff for management from staff table
+$stmt = $pdo->query("SELECT id, name, email, phone, role, branch, created_at FROM staff ORDER BY created_at DESC");
+$allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // Fetch order statistics from the database
     $stmt = $pdo->query("SELECT COUNT(*) FROM orders");
     $totalOrders = $stmt->fetchColumn();
@@ -1424,35 +1430,50 @@ try {
     <!-- VIEW: STAFF -->
     <div id="view-staff" class="view-section">
         <div class="panel-card">
-            <h3 style="margin-top:0; color: #ffffff;">➕ Add New Admin/Staff</h3>
-            <form method="POST" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <input type="hidden" name="action" value="create_user">
-                <div class="form-group">
-                    <label for="new-name">Full Name</label>
-                    <input type="text" id="new-name" name="name" placeholder="e.g. John Doe" required>
-                </div>
-                <div class="form-group">
-                    <label for="new-email">Email Address</label>
-                    <input type="email" id="new-email" name="email" placeholder="e.g. john@example.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="new-phone">Phone Number</label>
-                    <input type="tel" id="new-phone" name="phone" placeholder="0123456789" required pattern="01[0-9]{8,9}" title="Enter a valid Malaysian phone number (e.g., 0123456789)">
-                </div>
-                <div class="form-group">
-                    <label for="new-role">Role</label>
-                    <select id="new-role" name="role" required>
-                        <option value="staff">Staff</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
-                <div class="form-group" style="grid-column: span 2;">
-                    <label for="new-password">Password</label>
-                    <input type="password" id="new-password" name="password" placeholder="Create a strong password" required>
-                </div>
-                <button type="submit" class="btn-primary" style="grid-column: span 2;">Create Account</button>
-            </form>
+    <h3 style="margin-top:0; color: #ffffff;">➕ Add New Admin/Staff</h3>
+    <form method="POST" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <input type="hidden" name="action" value="create_user">
+        
+
+        <div class="form-group">
+            <label for="new-name">Full Name</label>
+            <input type="text" id="new-name" name="name" placeholder="e.g. John Doe" required>
         </div>
+
+        <div class="form-group">
+            <label for="new-email">Email Address</label>
+            <input type="email" id="new-email" name="email" placeholder="e.g. john@example.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="new-phone">Phone Number</label>
+            <input type="tel" id="new-phone" name="phone" placeholder="0123456789" required pattern="01[0-9]{8,9}" title="Enter a valid Malaysian phone number (e.g., 0123456789)">
+        </div>
+
+        <div class="form-group">
+            <label for="new-role">Role</label>
+            <select id="new-role" name="role" required>
+                <option value="kitchen">Kitchen</option>
+<option value="cashier">Cashier</option>
+<option value="admin">Admin</option>
+            </select>
+        </div>
+
+<div class="form-group">
+            <label for="new-branch">Branch</label>
+            <select id="new-branch" name="branch" required>
+                <option value="">Select Branch</option>
+                <option value="Kangar">Kangar</option>
+                <option value="Jejawi">Jejawi</option>
+                <option value="Arau">Arau</option>
+                <option value="Kuala Perlis">Kuala Perlis</option>
+                <option value="Beseri">Beseri</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn-primary" style="grid-column: span 2;">Create Account</button>
+    </form>
+</div>
 
         <div class="panel-card">
             <h3 style="margin-top:0; color: #ffffff;">👥 Staff List</h3>
@@ -1465,53 +1486,37 @@ try {
             <?php else: ?>
                 <table class="admin-table" id="staffTable">
                     <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Last Login</th>
-                            <th class="text-right">Actions</th>
-                        </tr>
+<tr>
+    <th>Name</th>
+    <th>Phone</th>
+    <th>Branch</th>
+    <th>Role</th>
+    <th>Created At</th>
+    <th class="text-right">Actions</th>
+</tr>
                     </thead>
                     <tbody>
                         <?php foreach ($allUsers as $user): 
                             $roleClass = 'role-' . strtolower($user['role']);
                         ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($user['name']); ?></td>
-                                <td><?php echo htmlspecialchars($user['gmail'] ?: 'N/A'); ?></td>
-                                <td>
-                                    <?php if ($isSuperAdmin && $user['id'] != $currentUserId): ?>
-                                        <form method="POST" style="display: inline;">
-                                            <input type="hidden" name="action" value="update_user_role">
-                                            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                            <select name="new_role" onchange="this.form.submit()" class="role-badge <?php echo $roleClass; ?>" style="border:none; -webkit-appearance: none; appearance: none; cursor:pointer; background-color: transparent;">
-                                                <option value="staff" <?php echo $user['role'] === 'staff' ? 'selected' : ''; ?>>Staff</option>
-                                                <option value="admin" <?php echo $user['role'] === 'admin' ? 'selected' : ''; ?>>Admin</option>
-                                            </select>
-                                        </form>
-                                    <?php else: ?>
-                                        <span class="role-badge <?php echo $roleClass; ?>"><?php echo ucfirst($user['role']); ?></span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if ($user['last_login']): echo '<span class="time-elapsed normal">' . time_since(strtotime($user['last_login'])) . '</span>'; else: echo '<span class="role-badge role-user" style="background:#4b5563; color:#d1d5db;">Never</span>'; endif; ?>
-                                </td>
-                                <td style="text-align:right;">
-                                    <?php if ($user['id'] != $currentUserId): ?>
-                                        <button type="button" class="btn-neutral action-btn" onclick="openResetPasswordModal(<?php echo $user['id']; ?>, '<?php echo htmlspecialchars($user['name']); ?>')">
-                                            Reset Pass
-                                        </button>
-                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this user? This action cannot be undone.');">
-                                            <input type="hidden" name="action" value="delete_user">
-                                            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                            <button type="submit" class="btn-danger action-btn">Delete</button>
-                                        </form>
-                                    <?php else: ?>
-                                        <span style="font-size:12px; color:#aaa;">(Current User)</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
+                           <tr>
+    <td><?php echo htmlspecialchars($user['name']); ?></td>
+    <td><?php echo htmlspecialchars($user['phone'] ?: '-'); ?></td>
+    <td><?php echo htmlspecialchars($user['branch'] ?: '-'); ?></td>
+    <td>
+        <span class="role-badge <?php echo 'role-' . strtolower($user['role']); ?>">
+            <?php echo ucfirst($user['role']); ?>
+        </span>
+    </td>
+    <td><?php echo htmlspecialchars($user['created_at']); ?></td>
+    <td style="text-align:right;">
+        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this staff? This action cannot be undone.');">
+            <input type="hidden" name="action" value="delete_user">
+            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+            <button type="submit" class="btn-danger action-btn">Delete</button>
+        </form>
+    </td>
+</tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
