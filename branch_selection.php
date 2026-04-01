@@ -6,13 +6,21 @@ include_once 'db.php';
 $globalStoreStatus = 'open';
 $openBranches = [];
 try {
+    // Enforce branch availability using system_settings
     $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
-    $globalStoreStatus = $stmt->fetchColumn() ?: 'open';
+    $globalStoreStatus = trim(strtolower($stmt->fetchColumn() ?: 'open'));
 
     // Only fetch branches if the store is globally open
     if ($globalStoreStatus === 'open') {
         $stmt = $pdo->query("SELECT name, phone FROM branches WHERE is_open = 1 ORDER BY name ASC");
         $openBranches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // DEBUGGING: If no branches show up, check the HTML source code (Ctrl+U)
+        if (empty($openBranches)) {
+            $debugStmt = $pdo->query("SELECT * FROM branches");
+            $allData = $debugStmt->fetchAll(PDO::FETCH_ASSOC);
+            echo "<!-- DEBUG: Branches in DB: " . print_r($allData, true) . " -->";
+        }
     }
 } catch (Exception $e) {}
 ?>
@@ -120,10 +128,15 @@ try {
     <h2>Choose Your <span>Branch</span></h2>
     
     <div class="branch-grid">
-        <?php if ($globalStoreStatus === 'closed' || empty($openBranches)): ?>
+        <?php if ($globalStoreStatus !== 'open'): ?>
             <div style="grid-column: 1 / -1; background: #181818; padding: 40px; border-radius: 15px; border: 1px solid #333;">
-                <h3 style="color: #ff5100;">All Branches Currently Closed</h3>
+                <h3 style="color: #e74c3c;">Store is currently closed. Please try again later.</h3>
                 <p style="color: #aaa;">Please check back later. We're sorry for the inconvenience.</p>
+            </div>
+        <?php elseif (empty($openBranches)): ?>
+            <div style="grid-column: 1 / -1; background: #181818; padding: 40px; border-radius: 15px; border: 1px solid #333;">
+                <h3 style="color: #ff5100;">No Branches Available</h3>
+                <p style="color: #aaa;">Please check back later.</p>
             </div>
         <?php else: ?>
             <?php foreach($openBranches as $branch): ?>

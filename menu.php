@@ -7,7 +7,7 @@ $globalStoreStatus = 'open';
 $branchStatuses = [];
 try {
     $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
-    $globalStoreStatus = $stmt->fetchColumn() ?: 'open';
+    $globalStoreStatus = trim(strtolower($stmt->fetchColumn() ?: 'open'));
 
     $stmt = $pdo->query("SELECT name, is_open FROM branches"); // Fetch all for JS logic
     $branchStatuses = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);

@@ -41,17 +41,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $globalStatus = $stmtGlobal->fetchColumn();
 
         if ($globalStatus === 'closed') {
-            throw new Exception("All branches are currently closed and cannot accept orders.");
+            throw new Exception("Store is currently closed. Please try again later.");
         }
 
         // Server-side validation: Check if branch is open
-        $branchName = $_POST['branch'] ?? 'Kangar';
+        $branchName = $_POST['branch'] ?? null;
+        
+        if (!$branchName) {
+            throw new Exception("No branch selected. Please select a branch first.");
+        }
+
         $stmtBranch = $pdo->prepare("SELECT is_open FROM branches WHERE name = ?");
         $stmtBranch->execute([$branchName]);
         $branchStatus = $stmtBranch->fetchColumn();
 
         if ($branchStatus === 0 || $branchStatus === '0') {
-            throw new Exception("The selected branch ($branchName) is currently closed and cannot accept orders.");
+            throw new Exception("Selected branch is currently unavailable.");
         }
 
 

@@ -29,10 +29,10 @@ try {
     try { $pdo->query("SELECT cost_price FROM menu_items LIMIT 1"); } catch (Exception $e) { $pdo->exec("ALTER TABLE menu_items ADD COLUMN cost_price DECIMAL(10, 2) DEFAULT 0.00"); }
     // Add columns for review moderation
     try { $pdo->query("SELECT review_is_approved FROM orders LIMIT 1"); } catch (Exception $e) { $pdo->exec("ALTER TABLE orders ADD COLUMN review_is_approved TINYINT(1) NOT NULL DEFAULT 1 AFTER admin_reply"); }
-    // Ensure store_status exists
-    $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'store_status'");
+    // Ensure global_store_status exists
+    $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
     $stmt->execute();
-    if ($stmt->rowCount() == 0) $pdo->exec("INSERT INTO system_settings (setting_key, setting_value) VALUES ('store_status', 'open')");
+    if ($stmt->rowCount() == 0) $pdo->exec("INSERT INTO system_settings (setting_key, setting_value) VALUES ('global_store_status', 'open')");
 } catch (PDOException $e) {}
 
 // Helper: Log Activity
@@ -624,9 +624,15 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $stmt = $pdo->query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 50");
     $activityLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+<<<<<<< HEAD
     // Fetch Store Status
     $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
     $storeStatus = $stmt->fetchColumn() ?: 'open';
+=======
+    // STEP 2: Fetch Global Store Status
+    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
+    $storeStatus = trim(strtolower($stmt->fetchColumn() ?: 'open'));
+>>>>>>> 6c3e2a84e7b514d0c2db0b2f2776b5150c0c9ef9
 
     // Fetch last login for current user
     $currentUserLastLogin = 'Never';
@@ -650,6 +656,7 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Dashboard - Bambam Burger</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
     * { box-sizing: border-box; }
@@ -2142,18 +2149,18 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="panel-card">
             <h3 style="margin-top:0; color: #ffffff;">⚙️ System Settings</h3>
             
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:20px; background:#1d1a2f; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
+            <div style="display:flex; align-items:center; gap:20px; padding:20px; background:#1d1a2f; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
                 <div>
                     <h4 style="margin:0; color: #ffffff;">Store Status</h4>
                     <p style="margin:5px 0 0 0; font-size:13px; color:#a0aec0;">Toggle to "Closed" to disable customer ordering.</p>
                 </div>
-                <form method="POST">
-                    <input type="hidden" name="action" value="toggle_store">
-                    <label class="switch">
-                        <input type="checkbox" name="status" value="open" onchange="this.form.submit()" <?php echo $storeStatus == 'open' ? 'checked' : ''; ?>>
-                        <span class="slider"></span>
-                    </label>
-                </form>
+                <label class="switch">
+                    <input type="checkbox" id="store-toggle" <?php echo ($storeStatus == 'open') ? 'checked' : ''; ?>>
+                    <span class="slider"></span>
+                </label>
+                <span id="status-label" style="font-weight: 800; font-size: 14px; color: <?php echo ($storeStatus == 'open') ? '#2ecc71' : '#e74c3c'; ?>;">
+                    STORE IS <?php echo strtoupper($storeStatus); ?>
+                </span>
             </div>
         </div>
     </div>
@@ -2819,6 +2826,23 @@ function filterGlobal(query) {
         filterTable('searchStaff', 'staffTable');
     }
 }
+// STEP 2: AJAX Toggle Handler with Force Alert
+$(document).on('change', '#store-toggle', function() {
+    const status = $(this).is(':checked') ? 'open' : 'closed';
+    $.post('update_status.php', { status: status }, function(response) {
+        alert("Server says: " + response);
+        if(response.includes("SUCCESS")) {
+            const label = $('#status-label');
+            if(status === 'open') {
+                label.text("STORE IS OPEN").css('color', '#2ecc71');
+            } else {
+                label.text("STORE IS CLOSED").css('color', '#e74c3c');
+            }
+        }
+    }).fail(function(xhr) {
+        alert("AJAX Error: " + xhr.statusText);
+    });
+});
 </script>
 
 </body>
