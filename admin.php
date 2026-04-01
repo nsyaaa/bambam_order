@@ -624,15 +624,14 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $stmt = $pdo->query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 50");
     $activityLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-<<<<<<< HEAD
+
     // Fetch Store Status
     $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
     $storeStatus = $stmt->fetchColumn() ?: 'open';
-=======
+
     // STEP 2: Fetch Global Store Status
     $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
     $storeStatus = trim(strtolower($stmt->fetchColumn() ?: 'open'));
->>>>>>> 6c3e2a84e7b514d0c2db0b2f2776b5150c0c9ef9
 
     // Fetch last login for current user
     $currentUserLastLogin = 'Never';
