@@ -1974,7 +1974,6 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <input type="date" name="report_end" value="<?php echo $reportEnd; ?>" style="padding:8px; border-radius:5px; border:1px solid rgba(255,255,255,0.1); background:#373359; color:white; color-scheme:dark;">
                 </div>
                 <button type="submit" class="btn-primary" style="height:38px; margin-top:14px;">Filter</button>
-<<<<<<< HEAD
                 <button type="button" 
                         onclick="window.location.href='export_orders.php?report_start=<?php echo $reportStart; ?>&report_end=<?php echo $reportEnd; ?>'" 
                         class="btn-success" 
@@ -1982,10 +1981,9 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <i class="fas fa-file-excel"></i>
                     Export Excel
                 </button>
-=======
                 <button type="button" onclick="window.open('print_report.php?start=<?php echo $reportStart; ?>&end=<?php echo $reportEnd; ?>', '_blank')" class="btn-primary" style="height:38px; margin-top:14px; background: #3498db; border-color: #3498db;"><i class="fas fa-print"></i> Print Report</button>
                 <button type="button" onclick="window.location.href='export_excel.php?start=<?php echo $reportStart; ?>&end=<?php echo $reportEnd; ?>'" class="btn-primary" style="height:38px; margin-top:14px; background: #166534; border-color: #166534;"><i class="fas fa-file-excel"></i> Export Excel</button>
->>>>>>> cc0ac60c5ff768d1b7fd0dc6d5f26c24782f8ee4
+
             </form>
             <div class="filter-pills" style="margin:0;">
                 <a href="?view=reports&report_start=<?php echo date('Y-m-d'); ?>&report_end=<?php echo date('Y-m-d'); ?>" class="filter-pill">Today</a>
