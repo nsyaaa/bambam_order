@@ -2,11 +2,15 @@
 include 'header.php'; 
 include_once 'db.php';
 
-// Check Store Status
-$storeStatus = 'open';
+// Fetch global and branch statuses for JS validation
+$globalStoreStatus = 'open';
+$branchStatuses = [];
 try {
-    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'store_status'");
-    $storeStatus = $stmt->fetchColumn() ?: 'open';
+    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
+    $globalStoreStatus = $stmt->fetchColumn() ?: 'open';
+
+    $stmt = $pdo->query("SELECT name, is_open FROM branches"); // Fetch all for JS logic
+    $branchStatuses = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 } catch (Exception $e) {}
 
 // Fetch best selling item names (e.g., top 3)
@@ -34,32 +38,6 @@ foreach ($results as $row) {
     }
     $menuItems[$row['category']][] = $row;
 }
-
-// Manually add new items that are not in the database yet
-$menuItems['burger'][] = [
-    'id' => 10002,
-    'category' => 'burger',
-    'name' => 'Burger Mix XL', 
-    'description' => 'Combined proteins standard',
-    'price' => 12.00,
-    'has_protein' => 0,
-    'variants' => json_encode([
-        ['name' => 'Single', 'price' => 12.00],
-        ['name' => 'Double', 'price' => 18.00],
-        ['name' => 'Triple', 'price' => 24.00]
-    ]),
-    'created_at' => date('Y-m-d H:i:s')
-];
-$menuItems['burger'][] = [
-    'id' => 10001,
-    'category' => 'burger',
-    'name' => 'Burger Kambing', 
-    'description' => 'Juicy lamb patty with special herbs and spices.',
-    'price' => 16.00,
-    'has_protein' => 0,
-    'variants' => null,
-    'created_at' => date('Y-m-d H:i:s')
-];
 
 // Prepare Data for JavaScript (Variants & Protein info)
 $jsMenuData = [];
@@ -410,10 +388,6 @@ if (isset($_SESSION['user_id'])) {
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
-<?php if($storeStatus === 'closed'): ?>
-    <div class="store-closed-banner">⛔ The store is currently CLOSED. Orders cannot be placed at this time.</div>
-<?php endif; ?>
-
 <div id="menu-content">
     <div class="branch-info-bar">
         <div class="branch-left">
@@ -534,13 +508,9 @@ if (isset($_SESSION['user_id'])) {
                         
                         <input type="number" class="qty" value="1">
                         
-                        <?php if($storeStatus === 'open'): ?>
                         <a href="#" class="add-btn" onclick="event.preventDefault(); addToCart(this);">
                             +
                         </a>
-                        <?php else: ?>
-                        <span style="color:#777; font-size:12px;">Closed</span>
-                        <?php endif; ?>
                     </div>
                 </div>
                 <?php
@@ -615,6 +585,8 @@ if (isset($_SESSION['user_id'])) {
 <script>
 const menuData = <?php echo json_encode($jsMenuData); ?>;
 const isLoggedIn = <?php echo isset($_SESSION['user_id']) ? 'true' : 'false'; ?>;
+const globalStoreStatus = '<?php echo $globalStoreStatus; ?>';
+const branchStatuses = <?php echo json_encode($branchStatuses); ?>;
 let cart = JSON.parse(localStorage.getItem('bambam_cart')) || [];
 
 function showCategories() {
@@ -917,6 +889,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const branch = localStorage.getItem('selected_branch') || 'Main Branch';
     document.getElementById('current-branch-display').innerText = branch;
+
+    // Check if the store is closed (globally or individually)
+    const selectedBranchStatus = branchStatuses[branch];
+    let isBranchClosed = false;
+    let closedMessage = '';
+
+    if (globalStoreStatus === 'closed') {
+        isBranchClosed = true;
+        closedMessage = `⛔ All branches are currently CLOSED. You cannot place orders at this time.`;
+    } else if (selectedBranchStatus === '0' || selectedBranchStatus === 0) {
+        isBranchClosed = true;
+        closedMessage = `⛔ The <strong>${branch}</strong> branch is currently CLOSED. You cannot place orders for this location.`;
+    }
+
+    if (isBranchClosed) {
+        // Branch is closed, show banner and disable ordering
+        const closedBanner = document.createElement('div');
+        closedBanner.className = 'store-closed-banner';
+        closedBanner.innerHTML = closedMessage;
+        document.body.appendChild(closedBanner);
+
+        document.querySelectorAll('.add-btn').forEach(btn => {
+            btn.outerHTML = '<span style="color:#777; font-size:12px; font-weight:bold;">CLOSED</span>';
+        });
+    }
 
     document.querySelectorAll('.menu-box').forEach(box => {
         box.addEventListener('click', () => {

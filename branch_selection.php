@@ -1,4 +1,21 @@
-<?php include 'header.php'; ?>
+<?php 
+include 'header.php'; 
+include_once 'db.php';
+
+// Check global status first
+$globalStoreStatus = 'open';
+$openBranches = [];
+try {
+    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
+    $globalStoreStatus = $stmt->fetchColumn() ?: 'open';
+
+    // Only fetch branches if the store is globally open
+    if ($globalStoreStatus === 'open') {
+        $stmt = $pdo->query("SELECT name, phone FROM branches WHERE is_open = 1 ORDER BY name ASC");
+        $openBranches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $e) {}
+?>
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800&family=Plus+Jakarta+Sans:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -103,30 +120,19 @@
     <h2>Choose Your <span>Branch</span></h2>
     
     <div class="branch-grid">
-        <div class="branch-option-card" onclick="selectBranch('Kangar')">
-            <i class="fas fa-utensils"></i>
-            <h3>Kangar</h3>
-        </div>
-
-        <div class="branch-option-card" onclick="selectBranch('Jejawi')">
-            <i class="fas fa-hamburger"></i>
-            <h3>Jejawi</h3>
-        </div>
-
-        <div class="branch-option-card" onclick="selectBranch('Arau')">
-            <i class="fas fa-store"></i>
-            <h3>Arau</h3>
-        </div>
-
-        <div class="branch-option-card" onclick="selectBranch('Kuala Perlis')">
-            <i class="fas fa-map-marker-alt"></i>
-            <h3>Kuala Perlis</h3>
-        </div>
-
-        <div class="branch-option-card" onclick="selectBranch('Beseri')">
-            <i class="fas fa-fire"></i>
-            <h3>Beseri</h3>
-        </div>
+        <?php if ($globalStoreStatus === 'closed' || empty($openBranches)): ?>
+            <div style="grid-column: 1 / -1; background: #181818; padding: 40px; border-radius: 15px; border: 1px solid #333;">
+                <h3 style="color: #ff5100;">All Branches Currently Closed</h3>
+                <p style="color: #aaa;">Please check back later. We're sorry for the inconvenience.</p>
+            </div>
+        <?php else: ?>
+            <?php foreach($openBranches as $branch): ?>
+                <div class="branch-option-card" onclick="selectBranch('<?php echo htmlspecialchars($branch['name']); ?>')">
+                    <i class="fas fa-store"></i>
+                    <h3><?php echo htmlspecialchars($branch['name']); ?></h3>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 </div>
 

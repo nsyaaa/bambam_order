@@ -120,46 +120,52 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
                 break;
             
-            case 'create_user':
-                if (isset($_POST['name'], $_POST['email'], $_POST['password'], $_POST['role'])) {
-                    try {
-                        $passHash = password_hash($_POST['password'], PASSWORD_DEFAULT);
-                        $stmt = $pdo->prepare("INSERT INTO users (name, gmail, phone, password, role) VALUES (?, ?, ?, ?, ?)");
-                        $stmt->execute([$_POST['name'], $_POST['email'], $_POST['phone'] ?? '', $passHash, $_POST['role']]);
-                        $message = "New " . htmlspecialchars($_POST['role']) . " created successfully!";
-                        logActivity($pdo, $currentUserId, $currentUserName, "Create User", "Created {$_POST['role']}: {$_POST['name']}");
-                    } catch (PDOException $e) {
-                        $message = "Error creating user: " . $e->getMessage();
-                    }
-                }
-                break;
-                
-            case 'delete_user':
-                if (isset($_POST['user_id'])) {
-                    try {
-                        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ? AND id != ?");
-                        $stmt->execute([$_POST['user_id'], $currentUserId]); // Prevent admin self-deletion
-                        $message = "User deleted successfully!";
-                        logActivity($pdo, $currentUserId, $currentUserName, "Delete User", "Deleted User ID {$_POST['user_id']}");
-                    } catch (PDOException $e) {
-                        $message = "Error deleting user: " . $e->getMessage();
-                    }
-                }
-                break;
+         case 'create_user':
+    if (isset($_POST['name'], $_POST['email'], $_POST['role'], $_POST['branch'])) {
+        try {
+            $stmt = $pdo->prepare("INSERT INTO staff (name, email, phone, role, branch) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $_POST['name'],
+                $_POST['email'],
+                $_POST['phone'] ?? '',
+                $_POST['role'],
+                $_POST['branch']
+            ]);
 
-            case 'reset_user_password':
-                if ($isSuperAdmin && isset($_POST['user_id'], $_POST['new_password'])) {
-                    try {
-                        $passHash = password_hash($_POST['new_password'], PASSWORD_DEFAULT);
-                        $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
-                        $stmt->execute([$passHash, $_POST['user_id']]);
-                        $message = "Password for user ID {$_POST['user_id']} has been reset.";
-                        logActivity($pdo, $currentUserId, $currentUserName, "Reset Password", "Reset password for User ID {$_POST['user_id']}");
-                    } catch (PDOException $e) {
-                        $message = "Error resetting password: " . $e->getMessage();
-                    }
-                }
-                break;
+            $message = "Staff added successfully!";
+            logActivity($pdo, $currentUserId, $currentUserName, "Create Staff", "Added staff {$_POST['name']} to {$_POST['branch']}");
+        } catch (PDOException $e) {
+            $message = "Error creating staff: " . $e->getMessage();
+        }
+    }
+    break;
+                
+case 'delete_user':
+    if (isset($_POST['user_id'])) {
+        try {
+            $stmt = $pdo->prepare("DELETE FROM staff WHERE id = ?");
+            $stmt->execute([$_POST['user_id']]);
+            $message = "Staff deleted successfully!";
+            logActivity($pdo, $currentUserId, $currentUserName, "Delete Staff", "Deleted Staff ID {$_POST['user_id']}");
+        } catch (PDOException $e) {
+            $message = "Error deleting staff: " . $e->getMessage();
+        }
+    }
+    break;
+
+case 'reset_user_password':
+    if ($isSuperAdmin && isset($_POST['user_id'], $_POST['new_password'])) {
+        try {
+            $passHash = password_hash($_POST['new_password'], PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("UPDATE staff SET password = ? WHERE id = ?");
+            $stmt->execute([$passHash, $_POST['user_id']]);
+            $message = "Password for staff ID {$_POST['user_id']} has been reset.";
+            logActivity($pdo, $currentUserId, $currentUserName, "Reset Staff Password", "Reset password for Staff ID {$_POST['user_id']}");
+        } catch (PDOException $e) {
+            $message = "Error resetting password: " . $e->getMessage();
+        }
+    }
+    break;
 
             case 'mark_as_paid':
                 if ($isSuperAdmin || $currentUserRole === 'staff') { // Allow staff to do this
@@ -246,7 +252,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             case 'create_menu_item':
                 if (isset($_POST['name'], $_POST['category'], $_POST['price'])) {
                     try {
-                        $variants = !empty($_POST['variants']) ? $_POST['variants'] : null;
+                        $variantsData = [];
+                        if (isset($_POST['variant_name']) && is_array($_POST['variant_name'])) {
+                            foreach ($_POST['variant_name'] as $index => $name) {
+                                $price = $_POST['variant_price'][$index] ?? 0;
+                                if (!empty(trim($name))) {
+                                    $variantsData[] = ['name' => trim($name), 'price' => (float)$price];
+                                }
+                            }
+                        }
+                        $variants = !empty($variantsData) ? json_encode($variantsData) : null;
                         $stmt = $pdo->prepare("INSERT INTO menu_items (category, name, description, price, cost_price, has_protein, variants) VALUES (?, ?, ?, ?, ?, ?, ?)");
                         $stmt->execute([
                             $_POST['category'], 
@@ -285,7 +300,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $newPrice = $_POST['price'];
 
                         // Update the item
-                        $variants = !empty($_POST['variants']) ? $_POST['variants'] : null;
+                        $variantsData = [];
+                        if (isset($_POST['variant_name']) && is_array($_POST['variant_name'])) {
+                            foreach ($_POST['variant_name'] as $index => $name) {
+                                $price = $_POST['variant_price'][$index] ?? 0;
+                                if (!empty(trim($name))) {
+                                    $variantsData[] = ['name' => trim($name), 'price' => (float)$price];
+                                }
+                            }
+                        }
+                        $variants = !empty($variantsData) ? json_encode($variantsData) : null;
                         $stmt = $pdo->prepare("UPDATE menu_items SET category=?, name=?, description=?, price=?, cost_price=?, has_protein=?, variants=? WHERE id=?");
                         $stmt->execute([$_POST['category'], $_POST['name'], $_POST['description'], $newPrice, $_POST['cost_price'] ?? 0.00, isset($_POST['has_protein']) ? 1 : 0, $variants, $_POST['item_id']]);
                         
@@ -340,9 +364,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             case 'fetch_chart_data':
                 if (isset($_POST['period'])) {
                     $period = $_POST['period'];
-                    $labels = []; $data = [];
+                    $labels = []; $data = []; $labelFormat = '';
                     try {
-                        if ($period === 'day') {
+                        if ($period === 'custom' && isset($_POST['start_date'], $_POST['end_date'])) {
+                            $start = $_POST['start_date'];
+                            $end = $_POST['end_date'];
+                            $dateDiff = (new DateTime($end))->diff(new DateTime($start))->days;
+
+                            if ($dateDiff > 90) { // Group by month for long ranges
+                                $groupBy = "DATE_FORMAT(created_at, '%Y-%m')";
+                                $labelFormat = 'M Y';
+                            } else { // Group by day for shorter ranges
+                                $groupBy = "DATE(created_at)";
+                                $labelFormat = 'd M';
+                            }
+                            $stmt = $pdo->prepare("SELECT $groupBy as label, SUM(total_amount) as total FROM orders WHERE status IN ('Served', 'Completed') AND created_at BETWEEN ? AND ? GROUP BY label ORDER BY MIN(created_at)");
+                            $stmt->execute([$start . ' 00:00:00', $end . ' 23:59:59']);
+                        } elseif ($period === 'day') {
                             $stmt = $pdo->query("SELECT DATE_FORMAT(created_at, '%l %p') as label, SUM(total_amount) as total FROM orders WHERE status IN ('Served', 'Completed') AND DATE(created_at) = CURDATE() GROUP BY HOUR(created_at) ORDER BY MIN(created_at)");
                         } elseif ($period === 'week') {
                             $stmt = $pdo->query("SELECT DATE_FORMAT(created_at, '%d %b') as label, SUM(total_amount) as total FROM orders WHERE status IN ('Served', 'Completed') AND created_at >= DATE(NOW()) - INTERVAL 7 DAY GROUP BY DATE(created_at) ORDER BY MIN(created_at)");
@@ -350,11 +388,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             $stmt = $pdo->query("SELECT DATE_FORMAT(created_at, '%d %b') as label, SUM(total_amount) as total FROM orders WHERE status IN ('Served', 'Completed') AND MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE()) GROUP BY DATE(created_at) ORDER BY MIN(created_at)");
                         } elseif ($period === 'year') {
                             $stmt = $pdo->query("SELECT DATE_FORMAT(created_at, '%M') as label, SUM(total_amount) as total FROM orders WHERE status IN ('Served', 'Completed') AND YEAR(created_at) = YEAR(CURRENT_DATE()) GROUP BY MONTH(created_at) ORDER BY MONTH(created_at)");
+                        } else {
+                            // Default to week if period is invalid
+                            $stmt = $pdo->query("SELECT DATE_FORMAT(created_at, '%d %b') as label, SUM(total_amount) as total FROM orders WHERE status IN ('Served', 'Completed') AND created_at >= DATE(NOW()) - INTERVAL 7 DAY GROUP BY DATE(created_at) ORDER BY MIN(created_at)");
                         }
                         
                         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         foreach ($rows as $row) {
-                            $labels[] = $row['label'];
+                            $labels[] = ($period === 'custom' && $labelFormat) ? date($labelFormat, strtotime($row['label'])) : $row['label'];
                             $data[] = (float)$row['total'];
                         }
                         ob_end_clean();
@@ -392,9 +433,9 @@ try {
     // Regular users count
     $stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'user'");
     $regularUsers = $stmt->fetchColumn();
-    // Get staff for management (exclude customers)
-    $stmt = $pdo->query("SELECT id, name, gmail, phone, role, created_at, last_login FROM users WHERE role != 'user' ORDER BY created_at DESC");
-    $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Get staff for management from staff table
+$stmt = $pdo->query("SELECT id, name, email, phone, role, branch, created_at FROM staff ORDER BY created_at DESC");
+$allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // Fetch order statistics from the database
     $stmt = $pdo->query("SELECT COUNT(*) FROM orders");
     $totalOrders = $stmt->fetchColumn();
@@ -617,8 +658,8 @@ try {
     body { 
         margin: 0;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #1d1a2f; /* Deep dark purple */
-        color: #e2e8f0; /* Light grey text */
+        background: #121212; /* Black */
+        color: #ddd; /* Light grey text */
         display: flex;
         height: 100vh;
         overflow: hidden; 
@@ -627,7 +668,7 @@ try {
     /* SIDEBAR */
     .sidebar {
         width: 260px;
-        background: #2b2744; /* Lighter dark shade */
+        background: #1e1e1e; /* Dark Grey */
         border-right: none; 
         display: flex;
         flex-direction: column;
@@ -662,20 +703,20 @@ try {
         cursor: pointer;
     }
     .nav-item:hover {
-        background: rgba(255, 255, 255, 0.05);
+        background: #333;
         color: #ffffff;
     }
     .nav-item.active {
-        background: #8b5cf6; /* Vibrant purple accent */
+        background: #ff5100; /* Orange */
         color: #ffffff;
         border-left-color: transparent;
         font-weight: 700;
-        box-shadow: 0 5px 15px rgba(139, 92, 246, 0.2);
+        box-shadow: 0 5px 15px rgba(255, 81, 0, 0.2);
     }
     .nav-item i { width: 20px; text-align: center; }
     
     .badge {
-        background: #ffffff; color: #8b5cf6; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold; margin-left: auto; 
+        background: #ffffff; color: #ff5100; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold; margin-left: auto; 
     }
     .nav-item.disabled { opacity: 0.5; pointer-events: none; }
 
@@ -693,7 +734,7 @@ try {
         flex: 1;
         padding: 30px; 
         overflow-y: scroll;
-        background: #1d1a2f; /* Deep dark purple */
+        background: #121212; /* Black */
     }
 
     /* HEADER */
@@ -703,7 +744,7 @@ try {
         justify-content: space-between;
         align-items: center; 
         gap: 20px; /* Add gap */
-        background: #2b2744; /* Header background */
+        background: #1e1e1e; /* Dark Grey */
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         flex-shrink: 0;
     }
@@ -716,8 +757,8 @@ try {
         color: #718096;
         margin-top: 4px;
     }
-    .breadcrumbs a { color: #a0aec0; text-decoration: none; }
-    .breadcrumbs a:hover { color: #8b5cf6; }
+    .breadcrumbs a { color: #aaa; text-decoration: none; }
+    .breadcrumbs a:hover { color: #ff5100; }
 
     .header-search {
         flex-grow: 1;
@@ -725,31 +766,30 @@ try {
         position: relative;
     }
     .header-search input { width: 100%; padding: 10px 15px 10px 40px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: #2b2744; font-size: 14px; color: #ffffff; }
-    .header-search .fa-search { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #718096; }
-    }
+    .header-search .fa-search { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #718096; }    
     .header-actions { display: flex; align-items: center; gap: 15px; margin-left: auto; }
     .icon-btn {
-        background: #2b2744;
+        background: #2a2a2a;
         border: 1px solid rgba(255, 255, 255, 0.1);
         width: 40px; height: 40px;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        color: #a0aec0;
+        color: #aaa;
         cursor: pointer;
         position: relative;
         transition: all 0.2s;
     }
-    .icon-btn:hover { background: #373359; color: #ffffff; }
+    .icon-btn:hover { background: #333; color: #ffffff; }
     .notification-dot {
         position: absolute; top: 8px; right: 8px;
         width: 8px; height: 8px;
         background: #ef4444;
         border-radius: 50%;
-        border: 2px solid #2b2744;
+        border: 2px solid #1e1e1e;
     }
     .profile-section { 
         display: flex; align-items: center; gap: 10px; 
-        background: #1d1a2f;
+        background: #121212;
         padding: 5px 12px 5px 5px;
         border-radius: 50px;
         cursor: pointer;
@@ -757,13 +797,13 @@ try {
         transition: all .2s;
     }
     .profile-section:hover { border-color: rgba(255,255,255,0.1); background: #373359; }
-    .profile-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+    .profile-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #333; }
     .profile-name { font-weight: 600; color: #ffffff; }
-    .profile-role { font-size: 12px; color: #a0aec0; line-height: 1; margin-top: 2px; }
+    .profile-role { font-size: 12px; color: #aaa; line-height: 1; margin-top: 2px; }
     .profile-arrow {
         font-size: 10px;
         margin-left: 5px;
-        color: #a0aec0;
+        color: #aaa;
         transition: transform 0.2s;
     }
     .profile-section:hover .profile-arrow { transform: rotate(180deg); }
@@ -776,11 +816,11 @@ try {
         margin-bottom: 30px;
     }
     .premium-card {
-        background: #2b2744; /* Lighter dark shade */
+        background: #1e1e1e; /* Dark Grey */
         padding: 25px;
         border-radius: 15px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.05); /* Glassmorphism border */
+        border: 1px solid #333;
     }
     .stat-card {
         display: flex;
@@ -802,12 +842,12 @@ try {
         font-size: 18px; color: white;
     }
     .icon-green { background: #10b981; }
-    .icon-blue { background: #3b82f6; }
+    .icon-blue { background: #ff5100; }
     .icon-orange { background: #f97316; }
-    .icon-purple { background: #8b5cf6; }
+    .icon-purple { background: #ff5100; }
 
     .card-body { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
-    .stat-label { margin: 0; color: #a0aec0; font-size: 14px; font-weight: 500; }
+    .stat-label { margin: 0; color: #aaa; font-size: 14px; font-weight: 500; }
     .stat-value { margin: 5px 0; font-size: 32px; color: #ffffff; font-weight: 700; }
     .stat-trend {
         margin: 0; font-size: 13px; font-weight: 600;
@@ -829,19 +869,19 @@ try {
     @keyframes toastOut { from { top: 30px; opacity: 1; } to { top: 0; opacity: 0; } }
 
     .panel-card {
-        background: #2b2744;
+        background: #1e1e1e;
         padding: 25px;
         border-radius: 16px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        border: 1px solid #333;
         margin-bottom: 20px;
     }
 
     /* TABLES & FORMS */
     .admin-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-    .admin-table th { text-align: left; padding: 16px 20px; color: #a0aec0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.1); background: #373359; }
-    .admin-table td { padding: 22px 20px; vertical-align: middle; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; }
-    .admin-table tr:hover td { background-color: #373359; }
+    .admin-table th { text-align: left; padding: 16px 20px; color: #ff5100; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #ff5100; background: #2a2a2a; }
+    .admin-table td { padding: 22px 20px; vertical-align: middle; border-bottom: 1px solid #333; transition: background 0.2s; }
+    .admin-table tr:hover td { background-color: #2a2a2a; }
     .admin-table tr:last-child td { border-bottom: none; }
     
     .btn-primary { background: #ff5100; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
@@ -870,20 +910,20 @@ try {
         opacity: 1;
         visibility: visible;
     }
-    .message.success { background: #1a472a; color: #a7f3d0; border: 1px solid #2f6c46; }
+    .message.success { background: #27211c; color: #f3a37b; border: 1px solid #5c3821; }
     .message.error { background: #4a1d1d; color: #fecaca; border: 1px solid #7f1d1d; }
 
      /* STATUS BADGES */
      .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px; letter-spacing: 0.5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
     .status-badge::before { content: '•'; font-size: 16px; line-height: 0; margin-bottom: 2px; }
     .status-pending { background: rgba(234, 179, 8, 0.1); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); }
-    .status-preparing { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .status-preparing { background: rgba(251, 146, 60, 0.1); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.3); }
     .status-ready { background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
     .status-completed, .status-served { background: #374151; color: #9ca3af; border: 1px solid #4b5563; }
 
 
     /* TYPOGRAPHY & ELEMENTS */
-    .order-id-badge { font-family: 'Courier New', monospace; font-weight: 700; color: #e2e8f0; background: #374151; padding: 4px 8px; border-radius: 6px; font-size: 13px; letter-spacing: -0.5px; }
+    .order-id-badge { font-family: 'Courier New', monospace; font-weight: 700; color: #ddd; background: #374151; padding: 4px 8px; border-radius: 6px; font-size: 13px; letter-spacing: -0.5px; }
     .customer-name { font-weight: 700; color: #ffffff; font-size: 14px; display: block; margin-bottom: 3px; }
     .customer-meta { font-size: 12px; color: #a0aec0; display: flex; align-items: center; gap: 6px; }
     
@@ -891,15 +931,15 @@ try {
         background: #373359; border: 1px solid rgba(255, 255, 255, 0.1); color: #a0aec0; padding: 5px 15px; border-radius: 20px; cursor: pointer; font-size: 13px; margin-right: 5px; transition: 0.2s;
     }
     .chart-filter-btn:hover { background: #4a456e; }
-    .chart-filter-btn.active { background: #8b5cf6; color: white; border-color: #8b5cf6; }
+    .chart-filter-btn.active { background: #ff5100; color: white; border-color: #ff5100; }
 
     .branch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-    .branch-card { background: #373359; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+    .branch-card { background: #2a2a2a; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #333; }
 
     /* KITCHEN VIEW */
     .kitchen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
     .kitchen-card { background: white; border-radius: 10px; padding: 15px; border-left: 5px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .kitchen-card.status-pending { border-left-color: #e67e22; }
+    .kitchen-card.status-pending { border-left-color: #f97316; }
     .kitchen-card.status-preparing { border-left-color: #3498db; }
     .kitchen-card h4 { margin: 0 0 10px 0; display: flex; justify-content: space-between; }
     .kitchen-items { margin: 10px 0; font-size: 14px; line-height: 1.4; }
@@ -921,16 +961,16 @@ try {
     }
     .search-bar:focus {
         outline: none;
-        border-color: #8b5cf6;
-        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        border-color: #ff5100;
+        box-shadow: 0 0 0 3px rgba(255, 81, 0, 0.2);
     }
 
     /* TOGGLE SWITCH */
     .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
     .switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #4b5563; transition: .4s; border-radius: 24px; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 24px; }
     .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-    input:checked + .slider { background-color: #2ecc71; }
+    input:checked + .slider { background-color: #ff5100; }
     input:checked + .slider:before { transform: translateX(26px); }
 
     /* EDIT MODAL */
@@ -945,19 +985,19 @@ try {
     .form-group { display: flex; flex-direction: column; gap: 5px; }
     .form-group label { font-weight: 600; font-size: 13px; color: #a0aec0; }
     .form-group input, .form-group select {
-        width: 100%;
+        width: 100%; 
         padding: 12px; /* More padding for aesthetic feel */
-        border: 1px solid rgba(255,255,255,0.1);
+        border: 1px solid #333;
         border-radius: 8px; /* Softer radius */
-        background: #1d1a2f;
+        background: #2a2a2a;
         color: #ffffff;
         transition: all 0.2s;
     }
     .form-group input:focus, .form-group select:focus {
         outline: none;
-        border-color: #8b5cf6;
-        background: #2b2744;
-        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        border-color: #ff5100;
+        background: #333;
+        box-shadow: 0 0 0 3px rgba(255, 81, 0, 0.2);
     }
 
     /* Professional Role Badges */
@@ -969,28 +1009,44 @@ try {
         text-transform: uppercase;
         letter-spacing: 0.5px;
         display: inline-block;
-    }
-    .role-admin { background-color: rgba(139, 92, 246, 0.2); color: #c4b5fd; } /* Soft Purple */
-    .role-staff { background-color: rgba(59, 130, 246, 0.2); color: #93c5fd; } /* Soft Blue */
+    } 
+    .role-admin { background-color: rgba(255, 81, 0, 0.2); color: #ff9c70; } /* Soft Orange */
+    .role-staff { background-color: rgba(251, 146, 60, 0.2); color: #fb923c; } /* Lighter Orange */
     .role-user { background: #374151; color: #9ca3af; }
 
     /* Neutral Action Button */
     .btn-neutral { background: #374151; color: #cbd5e0; padding: 5px 10px; font-size: 12px; border: 1px solid #4a5568; border-radius: 5px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
     .btn-neutral:hover { background: #4a5568; color: #ffffff; }
     .action-btn { min-width: 95px; text-align: center; }
+
+    /* Logout Button in Header */
+    .btn-logout {
+        background: #ff5100;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background 0.2s ease;
+    }
+    .btn-logout:hover { background: #e04600; }
 </style>
 <style>
     /* New Styles for Enhanced Orders View */
     .filter-pills { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-    .filter-pill { padding: 8px 16px; border-radius: 20px; background: #373359; border: 1px solid rgba(255,255,255,0.1); color: #a0aec0; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; }
-    .filter-pill:hover { background: #4a456e; }
-    .filter-pill.active { background: #8b5cf6; color: white; border-color: #8b5cf6; }
+    .filter-pill { padding: 8px 16px; border-radius: 20px; background: #333; border: 1px solid #444; color: #aaa; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; }
+    .filter-pill:hover { background: #444; }
+    .filter-pill.active { background: #ff5100; color: white; border-color: #ff5100; }
     
     /* Urgency & Stale Animations */
     @keyframes pulse-border {
-        0% { border-left-color: #e74c3c; }
-        50% { border-left-color: #f8b4b4; }
-        100% { border-left-color: #e74c3c; }
+        0% { border-left-color: #ff5100; }
+        50% { border-left-color: #ff9466; }
+        100% { border-left-color: #ff5100; }
     }
     .urgency-stale {
         border-left: 4px solid #e74c3c !important;
@@ -1009,7 +1065,7 @@ try {
     .pay-paid { background: rgba(34, 197, 94, 0.15); color: #4ade80; } /* Green */
     .pay-unpaid { background: rgba(234, 179, 8, 0.15); color: #facc15; } /* Yellow */
 
-    .bulk-actions { display: none; align-items: center; gap: 10px; background: rgba(59, 130, 246, 0.1); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .bulk-actions { display: none; align-items: center; gap: 10px; background: rgba(255, 81, 0, 0.1); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255, 81, 0, 0.3); }
     .bulk-actions.active { display: flex; }
 
     /* EMPTY STATE */
@@ -1030,7 +1086,7 @@ try {
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: 25px;
     }
-    .menu-card {
+    .menu-card { 
         background: #2b2744;
         border-radius: 16px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
@@ -1082,7 +1138,7 @@ try {
     .menu-card-content h4 { margin: 0 0 5px 0; font-size: 18px; color: #ffffff; }
     .menu-card-content .description { font-size: 13px; color: #a0aec0; line-height: 1.5; margin-bottom: 15px; flex-grow: 1; }
     .price-info { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
-    .price-info .selling-price { font-size: 24px; font-weight: 800; color: #8b5cf6; }
+    .price-info .selling-price { font-size: 24px; font-weight: 800; color: #ff5100; }
     .price-info .cost-info { font-size: 12px; color: #a0aec0; text-align: right; }
     .cost-info .profit-margin { font-weight: bold; color: #16a34a; }
     .menu-card-actions { border-top: 1px solid rgba(255,255,255,0.1); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: #1d1a2f; }
@@ -1111,7 +1167,7 @@ try {
     .dist-bar-row { display: flex; align-items: center; gap: 10px; }
     .dist-bar-label { font-size: 12px; font-weight: 600; color: #a0aec0; width: 50px; }
     .dist-bar-bg { flex-grow: 1; background: #374151; border-radius: 5px; height: 10px; overflow: hidden; }
-    .dist-bar-fill { height: 100%; background: #ffc107; border-radius: 5px; transition: width 0.5s; }
+    .dist-bar-fill { height: 100%; background: #ff5100; border-radius: 5px; transition: width 0.5s; }
     .dist-bar-count { font-size: 12px; font-weight: 700; color: #ffffff; width: 30px; text-align: right; }
 
     .reviews-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
@@ -1212,6 +1268,7 @@ try {
                 </div>
                 <i class="fas fa-chevron-down profile-arrow"></i>
             </div>
+            <a href="admin_logout.php" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </header>
 
@@ -1270,11 +1327,17 @@ try {
                     <h3 style="margin:0; color: #ffffff;">📈 Sales Analytics</h3>
                     <div>
                         <button onclick="updateChart('day', this)" class="chart-filter-btn">Today</button>
-                        <button onclick="updateChart('week', this)" class="chart-filter-btn active">Week</button>
-                        <button onclick="updateChart('month', this)" class="chart-filter-btn">Month</button>
-                        <button onclick="updateChart('year', this)" class="chart-filter-btn">Year</button>
-                        <button class="chart-filter-btn" title="Select Date Range"><i class="fas fa-calendar-alt"></i></button>
+                        <button onclick="updateChart('week', this)" class="chart-filter-btn active">This Week</button>
+                        <button onclick="updateChart('month', this)" class="chart-filter-btn">This Month</button>
+                        <button onclick="updateChart('year', this)" class="chart-filter-btn">This Year</button>
+                        <button onclick="toggleDateRangePicker(this)" class="chart-filter-btn" title="Select Date Range"><i class="fas fa-calendar-alt"></i></button>
                     </div>
+                </div>
+                <div id="custom-date-picker-container" style="display: none; background: #2a2a2a; padding: 10px; border-radius: 8px; margin-top: 10px; max-width: fit-content; gap: 10px; align-items: center;">
+                    <label for="chart-start-date" style="font-size:12px;">From:</label>
+                    <input type="date" id="chart-start-date" style="background:#333; border:1px solid #444; color:white; padding:5px; border-radius:4px; color-scheme: dark;">
+                    <label for="chart-end-date" style="font-size:12px;">To:</label>
+                    <input type="date" id="chart-end-date" style="background:#333; border:1px solid #444; color:white; padding:5px; border-radius:4px; color-scheme: dark;">
                 </div>
                 <div style="height: 400px; width: 100%;">
                     <canvas id="salesChart"></canvas>
@@ -1283,31 +1346,58 @@ try {
 
             <!-- Side Card -->
             <div class="premium-card" style="grid-column: span 4;">
-                <h3 style="margin:0 0 15px 0; color: #ffffff;">📊 Sales by Category</h3>
-                <?php if (empty($salesByCategory)): ?>
-                    <div class="empty-state" style="padding: 10px 0;">
-                        <div class="empty-icon">💰</div>
-                        <h3>No Sales Data</h3>
-                        <p>No completed sales found.</p>
+                <h3 style="margin:0 0 20px 0; color: #ffffff;">📊 Sales by Category</h3>
+                <div style="height: 400px; width: 100%; position: relative;">
+                    <?php if (empty($pieData) || array_sum($pieData) == 0): ?>
+                        <div class="empty-state" style="padding: 80px 0;">
+                            <div class="empty-icon" style="font-size: 50px;">🍩</div>
+                            <h3>No Sales Data</h3>
+                            <p>No sales in the selected period.</p>
+                        </div>
+                    <?php else: ?>
+                        <canvas id="categoryDonutChart"></canvas>
+                    <?php endif; ?>
                     </div>
-                <?php else: ?>
-                    <table class="admin-table" style="border-spacing: 0 10px;">
-                        <tbody>
-                            <?php 
-                            $totalCategorySales = array_sum(array_column($salesByCategory, 'category_sales'));
-                            foreach ($salesByCategory as $cat): 
-                                $percentage = $totalCategorySales > 0 ? ($cat['category_sales'] / $totalCategorySales) * 100 : 0;
-                            ?>
-                            <tr>
-                                <td style="padding: 5px 0; border:none;">
-                                    <span class="role-badge" style="text-transform: capitalize; background: rgba(99, 102, 241, 0.2); color: #a5b4fc;"><?php echo htmlspecialchars($cat['category']); ?></span>
-                                </td>
-                                <td class="text-right" style="font-weight: 700; font-size: 14px; padding: 5px 0; border:none; color: #ffffff;">RM <?php echo number_format($cat['category_sales'], 2); ?></td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Daily Sales Visualization -->
+        <div class="panel-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0; color: #ffffff;">📅 Daily Sales Snapshot</h3>
+                <input type="date" id="sales-date-picker" value="<?php echo date('Y-m-d'); ?>" style="padding:8px; border-radius:5px; border:1px solid #444; background:#2a2a2a; color:white; color-scheme:dark;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <!-- Left Column: Chart and Totals -->
+                <div>
+                    <div style="height: 300px; width: 100%; position: relative; margin-bottom: 20px;">
+                        <canvas id="dailySalesDonutChart"></canvas>
+                        <div id="donut-no-data" class="empty-state" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background: #1e1e1e; align-items:center; justify-content:center; flex-direction:column;">
+                            <div class="empty-icon" style="font-size: 50px;">🍩</div>
+                            <h3>No Sales Data</h3>
+                            <p>No sales recorded for this day.</p>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap: 20px; text-align:center;">
+                        <div style="flex:1; background: #2a2a2a; padding:15px; border-radius:10px;">
+                            <p style="margin:0; font-size:12px; color:#aaa;">TOTAL SALES</p>
+                            <p id="daily-total-sales" style="margin:5px 0 0 0; font-size:24px; font-weight:bold; color:#ff5100;">RM 0.00</p>
+                        </div>
+                        <div style="flex:1; background: #2a2a2a; padding:15px; border-radius:10px;">
+                            <p style="margin:0; font-size:12px; color:#aaa;">ITEMS SOLD</p>
+                            <p id="daily-total-quantity" style="margin:5px 0 0 0; font-size:24px; font-weight:bold; color:#ff5100;">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Hot Items -->
+                <div>
+                    <h4 style="margin-top:0; color: #ffffff;">🔥 Hot Selling Items</h4>
+                    <div id="hot-items-list">
+                        <!-- JS will populate this -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1315,35 +1405,50 @@ try {
     <!-- VIEW: STAFF -->
     <div id="view-staff" class="view-section">
         <div class="panel-card">
-            <h3 style="margin-top:0; color: #ffffff;">➕ Add New Admin/Staff</h3>
-            <form method="POST" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <input type="hidden" name="action" value="create_user">
-                <div class="form-group">
-                    <label for="new-name">Full Name</label>
-                    <input type="text" id="new-name" name="name" placeholder="e.g. John Doe" required>
-                </div>
-                <div class="form-group">
-                    <label for="new-email">Email Address</label>
-                    <input type="email" id="new-email" name="email" placeholder="e.g. john@example.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="new-phone">Phone Number</label>
-                    <input type="tel" id="new-phone" name="phone" placeholder="0123456789" required pattern="01[0-9]{8,9}" title="Enter a valid Malaysian phone number (e.g., 0123456789)">
-                </div>
-                <div class="form-group">
-                    <label for="new-role">Role</label>
-                    <select id="new-role" name="role" required>
-                        <option value="staff">Staff</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
-                <div class="form-group" style="grid-column: span 2;">
-                    <label for="new-password">Password</label>
-                    <input type="password" id="new-password" name="password" placeholder="Create a strong password" required>
-                </div>
-                <button type="submit" class="btn-primary" style="grid-column: span 2;">Create Account</button>
-            </form>
+    <h3 style="margin-top:0; color: #ffffff;">➕ Add New Admin/Staff</h3>
+    <form method="POST" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <input type="hidden" name="action" value="create_user">
+        
+
+        <div class="form-group">
+            <label for="new-name">Full Name</label>
+            <input type="text" id="new-name" name="name" placeholder="e.g. John Doe" required>
         </div>
+
+        <div class="form-group">
+            <label for="new-email">Email Address</label>
+            <input type="email" id="new-email" name="email" placeholder="e.g. john@example.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="new-phone">Phone Number</label>
+            <input type="tel" id="new-phone" name="phone" placeholder="0123456789" required pattern="01[0-9]{8,9}" title="Enter a valid Malaysian phone number (e.g., 0123456789)">
+        </div>
+
+        <div class="form-group">
+            <label for="new-role">Role</label>
+            <select id="new-role" name="role" required>
+                <option value="kitchen">Kitchen</option>
+<option value="cashier">Cashier</option>
+<option value="admin">Admin</option>
+            </select>
+        </div>
+
+<div class="form-group">
+            <label for="new-branch">Branch</label>
+            <select id="new-branch" name="branch" required>
+                <option value="">Select Branch</option>
+                <option value="Kangar">Kangar</option>
+                <option value="Jejawi">Jejawi</option>
+                <option value="Arau">Arau</option>
+                <option value="Kuala Perlis">Kuala Perlis</option>
+                <option value="Beseri">Beseri</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn-primary" style="grid-column: span 2;">Create Account</button>
+    </form>
+</div>
 
         <div class="panel-card">
             <h3 style="margin-top:0; color: #ffffff;">👥 Staff List</h3>
@@ -1356,53 +1461,37 @@ try {
             <?php else: ?>
                 <table class="admin-table" id="staffTable">
                     <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Last Login</th>
-                            <th class="text-right">Actions</th>
-                        </tr>
+<tr>
+    <th>Name</th>
+    <th>Phone</th>
+    <th>Branch</th>
+    <th>Role</th>
+    <th>Created At</th>
+    <th class="text-right">Actions</th>
+</tr>
                     </thead>
                     <tbody>
                         <?php foreach ($allUsers as $user): 
                             $roleClass = 'role-' . strtolower($user['role']);
                         ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($user['name']); ?></td>
-                                <td><?php echo htmlspecialchars($user['gmail'] ?: 'N/A'); ?></td>
-                                <td>
-                                    <?php if ($isSuperAdmin && $user['id'] != $currentUserId): ?>
-                                        <form method="POST" style="display: inline;">
-                                            <input type="hidden" name="action" value="update_user_role">
-                                            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                            <select name="new_role" onchange="this.form.submit()" class="role-badge <?php echo $roleClass; ?>" style="border:none; -webkit-appearance: none; appearance: none; cursor:pointer; background-color: transparent;">
-                                                <option value="staff" <?php echo $user['role'] === 'staff' ? 'selected' : ''; ?>>Staff</option>
-                                                <option value="admin" <?php echo $user['role'] === 'admin' ? 'selected' : ''; ?>>Admin</option>
-                                            </select>
-                                        </form>
-                                    <?php else: ?>
-                                        <span class="role-badge <?php echo $roleClass; ?>"><?php echo ucfirst($user['role']); ?></span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if ($user['last_login']): echo '<span class="time-elapsed normal">' . time_since(strtotime($user['last_login'])) . '</span>'; else: echo '<span class="role-badge role-user" style="background:#4b5563; color:#d1d5db;">Never</span>'; endif; ?>
-                                </td>
-                                <td style="text-align:right;">
-                                    <?php if ($user['id'] != $currentUserId): ?>
-                                        <button type="button" class="btn-neutral action-btn" onclick="openResetPasswordModal(<?php echo $user['id']; ?>, '<?php echo htmlspecialchars($user['name']); ?>')">
-                                            Reset Pass
-                                        </button>
-                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this user? This action cannot be undone.');">
-                                            <input type="hidden" name="action" value="delete_user">
-                                            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                            <button type="submit" class="btn-danger action-btn">Delete</button>
-                                        </form>
-                                    <?php else: ?>
-                                        <span style="font-size:12px; color:#aaa;">(Current User)</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
+                           <tr>
+    <td><?php echo htmlspecialchars($user['name']); ?></td>
+    <td><?php echo htmlspecialchars($user['phone'] ?: '-'); ?></td>
+    <td><?php echo htmlspecialchars($user['branch'] ?: '-'); ?></td>
+    <td>
+        <span class="role-badge <?php echo 'role-' . strtolower($user['role']); ?>">
+            <?php echo ucfirst($user['role']); ?>
+        </span>
+    </td>
+    <td><?php echo htmlspecialchars($user['created_at']); ?></td>
+    <td style="text-align:right;">
+        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this staff? This action cannot be undone.');">
+            <input type="hidden" name="action" value="delete_user">
+            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+            <button type="submit" class="btn-danger action-btn">Delete</button>
+        </form>
+    </td>
+</tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
@@ -1601,11 +1690,11 @@ try {
                 <div class="rating-dist-chart">
                     <?php for($i=5; $i>=1; $i--): 
                         $count = $ratingDistribution[$i];
-                        $percentage = $totalRatings > 0 ? ($count / $totalRatings) * 100 : 0;
+                        $percentage = $totalRatings > 0 ? ($count / $totalRatings) * 100 : 0; 
                     ?>
                     <div class="dist-bar-row">
                         <div class="dist-bar-label"><?php echo $i; ?> ★</div>
-                        <div class="dist-bar-bg"><div class="dist-bar-fill" style="width: <?php echo $percentage; ?>%; background: #8b5cf6;"></div></div>
+                        <div class="dist-bar-bg"><div class="dist-bar-fill" style="width: <?php echo $percentage; ?>%; background: #ff5100;"></div></div>
                         <div class="dist-bar-count"><?php echo $count; ?></div>
                     </div>
                     <?php endfor; ?>
@@ -1712,7 +1801,13 @@ try {
                 <div class="form-group"><label>Selling Price (RM)</label><input type="number" step="0.01" name="price" placeholder="12.00" required></div>
                 <div class="form-group"><label>Cost Price (RM)</label><input type="number" step="0.01" name="cost_price" placeholder="5.50"></div>
                 <div class="form-group" style="justify-content: center;"><label style="display:flex; align-items:center; gap:10px; margin-top:15px;"><input type="checkbox" name="has_protein"> Has Protein Option</label></div>
-                <div class="form-group" style="grid-column: span 3;"><label>Variants (JSON format)</label><textarea name="variants" placeholder='[{"name":"Single","price":12},{"name":"Double","price":18}]' style="height: 60px;"></textarea></div>
+                <div class="form-group" style="grid-column: span 3;">
+                    <label>Variants</label>
+                    <div id="add-variants-container">
+                        <!-- Dynamic variants will be added here by JS -->
+                    </div>
+                    <button type="button" onclick="addVariantRow('add-variants-container')" class="btn-neutral" style="margin-top: 10px; width: fit-content; padding: 8px 12px;">+ Add Variant</button>
+                </div>
                 <button type="submit" class="btn-primary" style="grid-column: span 3;">Add Item</button>
             </form>
         </div>
@@ -1865,7 +1960,7 @@ try {
         <div class="panel-card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
             <form method="GET" style="display:flex; align-items:center; gap:10px;">
                 <input type="hidden" name="view" value="reports">
-                <div style="display:flex; flex-direction:column;">
+                <div style="display:flex; flex-direction:column;"> 
                     <label style="font-size:10px; color:#a0aec0; font-weight:bold;">START DATE</label>
                     <input type="date" name="report_start" value="<?php echo $reportStart; ?>" style="padding:8px; border-radius:5px; border:1px solid rgba(255,255,255,0.1); background:#373359; color:white; color-scheme:dark;">
                 </div>
@@ -1874,6 +1969,7 @@ try {
                     <input type="date" name="report_end" value="<?php echo $reportEnd; ?>" style="padding:8px; border-radius:5px; border:1px solid rgba(255,255,255,0.1); background:#373359; color:white; color-scheme:dark;">
                 </div>
                 <button type="submit" class="btn-primary" style="height:38px; margin-top:14px;">Filter</button>
+<<<<<<< HEAD
                 <button type="button" 
                         onclick="window.location.href='export_orders.php?report_start=<?php echo $reportStart; ?>&report_end=<?php echo $reportEnd; ?>'" 
                         class="btn-success" 
@@ -1881,6 +1977,10 @@ try {
                     <i class="fas fa-file-excel"></i>
                     Export Excel
                 </button>
+=======
+                <button type="button" onclick="window.open('print_report.php?start=<?php echo $reportStart; ?>&end=<?php echo $reportEnd; ?>', '_blank')" class="btn-primary" style="height:38px; margin-top:14px; background: #3498db; border-color: #3498db;"><i class="fas fa-print"></i> Print Report</button>
+                <button type="button" onclick="window.location.href='export_excel.php?start=<?php echo $reportStart; ?>&end=<?php echo $reportEnd; ?>'" class="btn-primary" style="height:38px; margin-top:14px; background: #166534; border-color: #166534;"><i class="fas fa-file-excel"></i> Export Excel</button>
+>>>>>>> cc0ac60c5ff768d1b7fd0dc6d5f26c24782f8ee4
             </form>
             <div class="filter-pills" style="margin:0;">
                 <a href="?view=reports&report_start=<?php echo date('Y-m-d'); ?>&report_end=<?php echo date('Y-m-d'); ?>" class="filter-pill">Today</a>
@@ -2077,7 +2177,13 @@ try {
         <div class="form-group"><label>Selling Price (RM)</label><input type="number" step="0.01" id="edit-item-price" name="price" required></div>
         <div class="form-group"><label>Cost Price (RM)</label><input type="number" step="0.01" id="edit-item-cost-price" name="cost_price"></div>
         <div class="form-group" style="justify-content: center;"><label style="display:flex; align-items:center; gap:10px; margin-top:15px;"><input type="checkbox" id="edit-item-has_protein" name="has_protein"> Has Protein Option</label></div>
-        <textarea id="edit-item-variants" name="variants" placeholder='Variants JSON (e.g. [{"name":"Single","price":7},{"name":"Double","price":13}])' style="padding: 10px; border: 1px solid #4a5568; border-radius: 5px; grid-column: span 3; height: 60px; background: #1d1a2f; color: white;"></textarea>
+        <div class="form-group" style="grid-column: span 3;">
+            <label>Variants</label>
+            <div id="edit-variants-container">
+                <!-- Dynamic variants will be added here by JS -->
+            </div>
+            <button type="button" onclick="addVariantRow('edit-variants-container')" class="btn-neutral" style="margin-top: 10px; width: fit-content; padding: 8px 12px;">+ Add Variant</button>
+        </div>
         <button type="submit" class="btn-primary" style="grid-column: span 2;">Save Changes</button>
     </form>
   </div>
@@ -2126,6 +2232,21 @@ function switchView(viewId, navItem) {
     navItem.classList.add('active');
 }
 
+function addVariantRow(containerId, name = '', price = '') {
+    const container = document.getElementById(containerId);
+    const variantRow = document.createElement('div');
+    variantRow.style.display = 'flex';
+    variantRow.style.gap = '10px';
+    variantRow.style.marginBottom = '10px';
+    variantRow.style.alignItems = 'center';
+    variantRow.innerHTML = `
+        <input type="text" name="variant_name[]" placeholder="Variant Name (e.g. Double)" value="${name}" style="flex:2;">
+        <input type="number" step="0.01" name="variant_price[]" placeholder="Price" value="${price}" style="flex:1;">
+        <button type="button" onclick="this.parentElement.remove()" class="btn-danger" style="padding: 0 15px; height: 44px;">&times;</button>
+    `;
+    container.appendChild(variantRow);
+}
+
 function openEditModal(item) {
     document.getElementById('edit-item-id').value = item.id;
     document.getElementById('edit-item-name').value = item.name;
@@ -2134,7 +2255,18 @@ function openEditModal(item) {
     document.getElementById('edit-item-price').value = item.price;
     document.getElementById('edit-item-cost-price').value = item.cost_price;
     document.getElementById('edit-item-has_protein').checked = item.has_protein == 1;
-    document.getElementById('edit-item-variants').value = item.variants;
+    
+    const variantsContainer = document.getElementById('edit-variants-container');
+    variantsContainer.innerHTML = ''; // Clear previous variants
+    if (item.variants) {
+        try {
+            const variants = JSON.parse(item.variants);
+            if (Array.isArray(variants)) {
+                variants.forEach(v => addVariantRow('edit-variants-container', v.name, v.price));
+            }
+        } catch (e) { console.error("Could not parse variants JSON:", item.variants); }
+    }
+
     document.getElementById('edit-item-modal').style.display = 'block';
 }
 
@@ -2295,8 +2427,8 @@ const salesChart = new Chart(ctx, {
         datasets: [{
             label: 'Revenue (RM)',
             data: <?php echo json_encode($chartValues); ?>,
-            borderColor: '#8b5cf6',
-            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            borderColor: '#ff5100',
+            backgroundColor: 'rgba(255, 81, 0, 0.1)',
             borderWidth: 3,
             fill: true,
             tension: 0.4
@@ -2310,7 +2442,7 @@ const salesChart = new Chart(ctx, {
                 beginAtZero: true,
                 grid: { color: 'rgba(255, 255, 255, 0.05)' },
                 ticks: {
-                    color: '#a0aec0',
+                    color: '#aaa',
                     callback: function(value) { return 'RM ' + value; }
                 }
             },
@@ -2326,15 +2458,36 @@ const salesChart = new Chart(ctx, {
     }
 });
 
-function updateChart(period, btn) {
-    if(btn) {
+function toggleDateRangePicker(btn) {
+    const picker = document.getElementById('custom-date-picker-container');
+    const isActive = picker.style.display === 'flex';
+    if (isActive) {
+        picker.style.display = 'none';
+        btn.classList.remove('active');
+    } else {
+        picker.style.display = 'flex';
         document.querySelectorAll('.chart-filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+    }
+}
+
+function updateChart(period, btn, startDate = null, endDate = null) {
+    if (btn) {
+        document.querySelectorAll('.chart-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        // Hide custom date picker if a preset button is clicked
+        if (period !== 'custom') {
+            document.getElementById('custom-date-picker-container').style.display = 'none';
+        }
     }
 
     const formData = new FormData();
     formData.append('action', 'fetch_chart_data');
     formData.append('period', period);
+    if (period === 'custom' && startDate && endDate) {
+        formData.append('start_date', startDate);
+        formData.append('end_date', endDate);
+    }
 
     fetch('admin.php', { method: 'POST', body: formData })
     .then(response => response.json())
@@ -2351,16 +2504,16 @@ function createSparkline(canvasId, data) {
     const ctx = document.getElementById(canvasId).getContext('2d');
     
     const gradient = ctx.createLinearGradient(0, 0, 0, 50);
-    gradient.addColorStop(0, 'rgba(139, 92, 246, 0.2)');
-    gradient.addColorStop(1, 'rgba(139, 92, 246, 0)');
+    gradient.addColorStop(0, 'rgba(255, 81, 0, 0.2)');
+    gradient.addColorStop(1, 'rgba(255, 81, 0, 0)');
 
     new Chart(ctx, {
         type: 'line',
         data: {
             labels: Array.from(Array(data.length).keys()), // Dummy labels
             datasets: [{
-                data: data, 
-                borderColor: '#a78bfa',
+                data: data,
+                borderColor: '#ff5100',
                 borderWidth: 2,
                 fill: true,
                 backgroundColor: gradient,
@@ -2397,8 +2550,8 @@ if (ctxPie) {
             labels: <?php echo json_encode($pieLabels); ?>,
             datasets: [{
                 data: <?php echo json_encode($pieData); ?>,
-                backgroundColor: ['#8b5cf6', '#f97316', '#10b981', '#3b82f6', '#ef4444'],
-                borderColor: '#2b2744',
+                backgroundColor: ['#ff5100', '#e67e22', '#f39c12', '#d35400', '#c0392b'],
+                borderColor: '#1e1e1e',
                 borderWidth: 2
             }]
         },
@@ -2406,7 +2559,7 @@ if (ctxPie) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'right', labels: { color: '#a0aec0', font: { size: 12 } } }
+                legend: { position: 'right', labels: { color: '#aaa', font: { size: 12 } } }
             }
         }
     });
@@ -2421,8 +2574,8 @@ if (ctxBar) {
             datasets: [{
                 label: 'Revenue (RM)',
                 data: <?php echo json_encode($trendRevenue); ?>,
-                borderColor: '#8b5cf6',
-                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                borderColor: '#ff5100',
+                backgroundColor: 'rgba(255, 81, 0, 0.1)',
                 fill: true,
                 yAxisID: 'y'
             }, {
@@ -2446,6 +2599,160 @@ if (ctxBar) {
     });
 }
 
+// Consistent Color Mapping for Categories
+const categoryColorMap = {
+    'burger': '#ff5100',      // Main Orange
+    'special': '#9b59b6',     // Purple
+    'addon': '#2ecc71',       // Green
+    'minuman': '#3498db',     // Blue
+    'uncategorized': '#95a5a6' // Grey
+};
+const defaultColor = '#bdc3c7'; // A fallback color for new categories
+
+// === DAILY SALES DONUT CHART LOGIC ===
+let dailySalesChart;
+
+function initializeDailySalesChart() {
+    const ctx = document.getElementById('dailySalesDonutChart').getContext('2d');
+    dailySalesChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Sales',
+                data: [],
+                backgroundColor: [], // Will be populated dynamically
+                borderColor: '#1e1e1e',
+                borderWidth: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#aaa', font: { size: 12 }, padding: 15 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            const value = context.raw;
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
+                            return ` ${context.label}: RM ${value.toFixed(2)} (${percentage})`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+async function fetchDailySales(date) {
+    try {
+        const response = await fetch(`get_daily_sales_data.php?date=${date}`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        updateDailySalesUI(data);
+    } catch (error) {
+        console.error('Failed to fetch daily sales data:', error);
+        document.getElementById('daily-total-sales').innerText = 'Error';
+        document.getElementById('daily-total-quantity').innerText = 'Error';
+        document.getElementById('hot-items-list').innerHTML = '<p style="color:red;">Failed to load data.</p>';
+    }
+}
+
+function updateDailySalesUI(data) {
+    document.getElementById('daily-total-sales').innerText = `RM ${data.totalSales.toFixed(2)}`;
+    document.getElementById('daily-total-quantity').innerText = data.totalQuantity;
+
+    const hotItemsList = document.getElementById('hot-items-list');
+    hotItemsList.innerHTML = '';
+    if (data.hotItems.length > 0) {
+        let listHtml = '<table class="admin-table" style="margin:0;">';
+        data.hotItems.forEach((item, index) => {
+            const icon = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : '🔥'));
+            listHtml += `
+                <tr style="background:none;">
+                    <td style="padding: 12px 0; border-color: #333;">${icon} ${item.item_name}</td>
+                    <td style="padding: 12px 0; text-align:right; border-color: #333; font-weight:bold;">${item.quantity_sold} sold</td>
+                </tr>
+            `;
+        });
+        listHtml += '</table>';
+        hotItemsList.innerHTML = listHtml;
+    } else {
+        hotItemsList.innerHTML = `
+            <div class="empty-state" style="padding: 40px 0;">
+                <div class="empty-icon">🤷</div>
+                <p>No items sold on this day.</p>
+            </div>`;
+    }
+
+    const noDataEl = document.getElementById('donut-no-data');
+    if (data.categoryData.data.length > 0) {
+        noDataEl.style.display = 'none';
+        dailySalesChart.data.labels = data.categoryData.labels;
+        dailySalesChart.data.datasets[0].data = data.categoryData.data;
+        // Dynamically assign colors based on labels
+        dailySalesChart.data.datasets[0].backgroundColor = data.categoryData.labels.map(label => categoryColorMap[label.toLowerCase()] || defaultColor);
+        dailySalesChart.update();
+    } else {
+        noDataEl.style.display = 'flex';
+        dailySalesChart.data.labels = [];
+        dailySalesChart.data.datasets[0].data = [];
+        dailySalesChart.update();
+    }
+}
+
+// Dashboard Main Donut Chart (Sales by Category)
+const ctxDonut = document.getElementById('categoryDonutChart');
+if (ctxDonut) {
+    const donutLabels = <?php echo json_encode($pieLabels); ?>;
+    // Dynamically assign colors based on labels from PHP
+    const donutColors = donutLabels.map(label => categoryColorMap[label.toLowerCase()] || defaultColor);
+
+    new Chart(ctxDonut.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: donutLabels,
+            datasets: [{
+                label: 'Sales',
+                data: <?php echo json_encode($pieData); ?>,
+                backgroundColor: donutColors,
+                borderColor: '#1e1e1e',
+                borderWidth: 4,
+                hoverBorderColor: '#333'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#aaa', font: { size: 12 }, padding: 20, usePointStyle: true, pointStyle: 'rectRounded' }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            const value = context.raw;
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
+                            return ` ${context.label}: RM ${value.toFixed(2)} (${percentage})`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 // Dummy data for sparklines
 createSparkline('sparkline-sales', [5, 10, 8, 15, 12, 18, 17]);
 createSparkline('sparkline-orders', [2, 3, 2, 5, 4, 6, 5]);
@@ -2464,6 +2771,35 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             toast.classList.remove('show');
         }, 5100);
+    }
+
+    // Initialize Daily Sales Chart
+    const datePicker = document.getElementById('sales-date-picker');
+    if (datePicker) {
+        initializeDailySalesChart();
+        fetchDailySales(datePicker.value); // Initial load
+
+        datePicker.addEventListener('change', (event) => {
+            fetchDailySales(event.target.value);
+        });
+
+        setInterval(() => {
+            fetchDailySales(datePicker.value);
+        }, 30000); // Auto-update every 30 seconds
+    }
+
+    // Initialize Sales Analytics Date Range Picker
+    const startDateInput = document.getElementById('chart-start-date');
+    const endDateInput = document.getElementById('chart-end-date');
+    if (startDateInput && endDateInput) {
+        const updateFromRange = () => {
+            if (startDateInput.value && endDateInput.value) {
+                // The button is the calendar icon, which should be active
+                updateChart('custom', document.querySelector('.chart-filter-btn[title="Select Date Range"]'), startDateInput.value, endDateInput.value);
+            }
+        };
+        startDateInput.addEventListener('change', updateFromRange);
+        endDateInput.addEventListener('change', updateFromRange);
     }
 });
 
