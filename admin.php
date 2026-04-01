@@ -336,31 +336,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
                 break;
 
-            // --- REPORT GENERATION ---
-            case 'export_report':
-                if (isset($_POST['start_date'], $_POST['end_date'])) {
-                    $start = $_POST['start_date'];
-                    $end = $_POST['end_date'] . ' 23:59:59';
-                    
-                    try {
-                        $stmt = $pdo->prepare("SELECT id, created_at, customer_name, branch, order_type, total_amount, status, payment_method FROM orders WHERE created_at BETWEEN ? AND ? ORDER BY created_at DESC");
-                        $stmt->execute([$start, $end]);
-                        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                        
-                        // Clear buffer to prevent HTML pollution in CSV
-                        ob_end_clean();
-                        header('Content-Type: text/csv');
-                        header('Content-Disposition: attachment; filename="sales_report_' . $_POST['start_date'] . '_to_' . $_POST['end_date'] . '.csv"');
-                        
-                        $output = fopen('php://output', 'w');
-                        fputcsv($output, ['Order ID', 'Date', 'Customer', 'Branch', 'Type', 'Total (RM)', 'Status', 'Payment Method']);
-                        foreach ($rows as $row) fputcsv($output, $row);
-                        fclose($output);
-                        exit;
-                    } catch (PDOException $e) { $message = "Error generating report: " . $e->getMessage(); }
-                }
-                break;
-
             // --- AJAX CHART DATA ---
             case 'fetch_chart_data':
                 if (isset($_POST['period'])) {
@@ -1899,7 +1874,13 @@ try {
                     <input type="date" name="report_end" value="<?php echo $reportEnd; ?>" style="padding:8px; border-radius:5px; border:1px solid rgba(255,255,255,0.1); background:#373359; color:white; color-scheme:dark;">
                 </div>
                 <button type="submit" class="btn-primary" style="height:38px; margin-top:14px;">Filter</button>
-                <button type="button" onclick="window.open('print_report.php?start=<?php echo $reportStart; ?>&end=<?php echo $reportEnd; ?>', '_blank')" class="btn-primary" style="height:38px; margin-top:14px; background: #111; border: 1px solid #ff5100; color: #ff5100;"><i class="fas fa-print"></i> Print Report</button>
+                <button type="button" 
+                        onclick="window.location.href='export_orders.php?report_start=<?php echo $reportStart; ?>&report_end=<?php echo $reportEnd; ?>'" 
+                        class="btn-success" 
+                        style="height:38px; margin-top:14px; background: #28a745; color: white; border: none; padding: 0 15px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-file-excel"></i>
+                    Export Excel
+                </button>
             </form>
             <div class="filter-pills" style="margin:0;">
                 <a href="?view=reports&report_start=<?php echo date('Y-m-d'); ?>&report_end=<?php echo date('Y-m-d'); ?>" class="filter-pill">Today</a>
@@ -2022,22 +2003,6 @@ try {
             <?php endif; ?>
         </div>
 
-        <div class="panel-card">
-            <h3 style="margin-top:0; color: #ffffff;">📄 Generate Sales Report</h3>
-            <p style="color:#a0aec0; font-size:14px;">Download a CSV file of all orders for the selected range.</p>
-            <form method="POST" style="display: flex; gap: 15px; align-items: flex-end; background: #1d1a2f; padding: 20px; border-radius: 10px;">
-                <input type="hidden" name="action" value="export_report">
-                <div style="display:flex; flex-direction:column; gap:5px;">
-                    <label style="font-weight:bold; font-size:12px; color: #a0aec0;">Start Date</label>
-                    <input type="date" name="start_date" value="<?php echo $reportStart; ?>" required style="padding: 10px; border: 1px solid #4a5568; border-radius: 5px; background: #373359; color: white; color-scheme: dark;">
-                </div>
-                <div style="display:flex; flex-direction:column; gap:5px;">
-                    <label style="font-weight:bold; font-size:12px; color: #a0aec0;">End Date</label>
-                    <input type="date" name="end_date" value="<?php echo $reportEnd; ?>" required style="padding: 10px; border: 1px solid #4a5568; border-radius: 5px; background: #373359; color: white; color-scheme: dark;">
-                </div>
-                <button type="submit" class="btn-primary" style="height: 40px;"><i class="fas fa-download"></i> Download CSV</button>
-            </form>
-        </div>
     </div>
 
     <!-- VIEW: BRANCHES -->
