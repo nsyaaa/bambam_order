@@ -407,13 +407,11 @@ case 'reset_user_password':
 
             // --- SYSTEM SETTINGS ---
             case 'toggle_store':
-                if (isset($_POST['status'])) {
-                    $newStatus = $_POST['status'] === 'open' ? 'open' : 'closed';
-                    $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES ('store_status', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
-                    $stmt->execute([$newStatus, $newStatus]);
-                    $message = "Store is now " . strtoupper($newStatus);
-                    logActivity($pdo, $currentUserId, $currentUserName, "Store Status", "Changed to $newStatus");
-                }
+                $newStatus = isset($_POST['status']) ? 'open' : 'closed';
+                $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES ('global_store_status', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+                $stmt->execute([$newStatus, $newStatus]);
+                $message = "Store is now " . strtoupper($newStatus);
+                logActivity($pdo, $currentUserId, $currentUserName, "Store Status", "Changed to $newStatus");
                 break;
         }
     }
@@ -627,7 +625,7 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $activityLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Fetch Store Status
-    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'store_status'");
+    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
     $storeStatus = $stmt->fetchColumn() ?: 'open';
 
     // Fetch last login for current user
