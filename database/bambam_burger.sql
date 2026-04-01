@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 01, 2026 at 03:51 AM
+-- Generation Time: Apr 01, 2026 at 10:39 AM
 -- Server version: 8.4.3
 -- PHP Version: 8.3.28
 
@@ -90,6 +90,30 @@ INSERT INTO `activity_logs` (`id`, `user_id`, `user_name`, `action`, `details`, 
 (47, 1, 'lunaa', 'Create Staff', 'Added staff si to Kangar', '2026-03-31 19:53:54'),
 (48, 1, 'lunaa', 'Create Staff', 'Added staff john to Kangar', '2026-04-01 02:32:08'),
 (49, 1, 'lunaa', 'Create Staff', 'Added staff auni to Kangar', '2026-04-01 02:32:45');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `branches`
+--
+
+CREATE TABLE `branches` (
+  `id` int NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `is_open` tinyint(1) DEFAULT '1'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `branches`
+--
+
+INSERT INTO `branches` (`id`, `name`, `phone`, `is_open`) VALUES
+(1, 'Kangar', '017-590 0799', 1),
+(2, 'Jejawi', '013-777 1763', 1),
+(3, 'Arau', '019-551 1765', 1),
+(4, 'Kuala Perlis', '011-1989 8669', 1),
+(5, 'Beseri', '011-1006 4068', 1);
 
 -- --------------------------------------------------------
 
@@ -295,7 +319,8 @@ INSERT INTO `orders` (`id`, `user_id`, `branch`, `order_type`, `customer_name`, 
 (70, NULL, 'Beseri', 'Delivery', 'lunaa', NULL, 16.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Preparing', NULL, 1, '2026-03-04 01:28:30', NULL, NULL, 'na'),
 (71, NULL, 'Beseri', 'Delivery', 'lunaa', NULL, 15.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-03-04 01:57:41', NULL, NULL, 'na'),
 (72, NULL, 'Beseri', 'Delivery', 'lunaa', NULL, 16.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-03-04 02:30:18', NULL, NULL, 'na'),
-(73, 5, 'Kangar', 'Delivery', 'lunaa', '0162032784', 3.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Completed', NULL, 1, '2026-03-04 02:57:59', NULL, NULL, 'na');
+(73, 5, 'Kangar', 'Delivery', 'lunaa', '0162032784', 3.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Completed', NULL, 1, '2026-03-04 02:57:59', NULL, NULL, 'na'),
+(74, 10, 'Beseri', 'Delivery', 'nini', '0195711302', 332.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Completed', NULL, 1, '2026-04-01 10:03:14', NULL, NULL, 'Politeknik Tuanku Syed Sirajuddin');
 
 -- --------------------------------------------------------
 
@@ -391,7 +416,14 @@ INSERT INTO `order_items` (`id`, `order_id`, `item_name`, `variant`, `protein`, 
 (77, 70, 'Custom Burger', 'Custom Build', '', 16.00, 1, 'Bottom Bun, Tomato, Chicken Patty, Beef Patty, Lettuce, Top Bun'),
 (78, 71, 'Custom Burger', 'Custom Build', '', 15.50, 1, 'Bottom Bun, Tomato, Cheese Slice, Cheese Slice, Lettuce, Beef Patty, Onion Ring, Top Bun'),
 (79, 72, 'Custom Burger', 'Custom Build', '', 16.00, 1, 'Bottom Bun, Chicken Patty, Tomato, Lettuce, Beef Patty, Top Bun'),
-(80, 73, 'INDOCAFE', 'Sejuk', '', 3.00, 1, '');
+(80, 73, 'INDOCAFE', 'Sejuk', '', 3.00, 1, ''),
+(81, 74, 'BURGER WAGYU', 'Standard', '', 20.00, 8, ''),
+(82, 74, 'BURGER ITIK', 'Standard', '', 16.00, 3, ''),
+(83, 74, 'TELUR', 'Standard', '', 1.50, 6, ''),
+(84, 74, 'AYAM POPCORN', 'Standard', '', 5.00, 5, ''),
+(85, 74, 'CHICKEN GRILL BURGER', 'Single', '', 8.50, 4, ''),
+(86, 74, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 3, ''),
+(87, 74, 'HAWAIIAN SPICY', 'Single', 'Ayam', 8.00, 4, '');
 
 -- --------------------------------------------------------
 
@@ -434,7 +466,7 @@ CREATE TABLE `system_settings` (
 --
 
 INSERT INTO `system_settings` (`setting_key`, `setting_value`) VALUES
-('store_status', 'open');
+('global_store_status', 'open');
 
 -- --------------------------------------------------------
 
@@ -461,14 +493,15 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `gmail`, `phone`, `password`, `reset_token`, `reset_expire`, `created_at`, `profile_pic`, `role`, `last_login`) VALUES
-(1, 'lunaa', 'admin@bambam.com', '0162032784', '$2y$10$.Cj/Z8hiFnwI6l4oFLvWTex2gBMKP937yfqaYqR8yXZc9LwmnQEuS', 'bf11520b5572464c764faadeb65faf8a', '2026-01-20 19:27:30', '2026-01-19 11:13:25', 'uploads/profile_1_1769165846.jpg', 'admin', '2026-03-31 18:59:09'),
+(1, 'lunaa', 'admin@bambam.com', '0162032784', '$2y$10$.Cj/Z8hiFnwI6l4oFLvWTex2gBMKP937yfqaYqR8yXZc9LwmnQEuS', 'bf11520b5572464c764faadeb65faf8a', '2026-01-20 19:27:30', '2026-01-19 11:13:25', 'uploads/profile_1_1769165846.jpg', 'admin', '2026-04-01 10:05:06'),
 (2, 'auni', 'auni@gmail.com', '0166300089', '$2y$10$uFJGvQ4.Qqu1TVDZLrclI.ZfDOzs1xddEmEAvsWhkuPXKESFgTkPK', 'e4af24b8b26ddafd479029a6b8272aa4', '2026-01-20 18:47:42', '2026-01-20 18:15:39', NULL, 'user', NULL),
 (3, 'irfan', 'irfan@gmail.com', '01169509870', '$2y$10$vXbxWiWdNw1hsvndOY/ImuG1RyBXAdSq4fQ8odImVXSXTMebJLttG', NULL, NULL, '2026-01-23 09:36:00', NULL, 'user', NULL),
 (5, 'lunaa', 'kiyowosya.my@gmail.com', '0162032784', '$2y$10$E8xINqZtj6u1gwc9lqV1sOt0CETF5CbxKnyO/5zdPFx1PpfhEvNVO', NULL, NULL, '2026-01-23 16:11:55', 'uploads/profile_5_1771511561.jpg', 'user', NULL),
 (6, 'iman', 'iman@gmail.com', '0111111111', '$2y$10$iEVD0fzkq8P1HtGxSLUtgOCH3AMWXHfECsgRpEpWZJ/ahmp5PRL2K', NULL, NULL, '2026-01-24 02:41:27', NULL, 'staff', NULL),
 (7, 'lunaa', 'luna@gmail.com', '0162032784', '$2y$10$8SXJYPlNf8wNU0hyQOF/N.erX0evxLbvsrY28rvemn8WCcoJswigS', NULL, NULL, '2026-02-06 03:04:52', NULL, 'user', NULL),
 (8, 'qayla isabella', 'im.qylaaa@gmail.com', '01139364706', '$2y$10$MjIQiYDwzjLXvh/VE0WNsez6R1Ck3UbWkk9Njf87tllltNFKDugzW', NULL, NULL, '2026-03-25 10:05:47', NULL, 'user', NULL),
-(9, 'qayla isabella', 'im.qylaaaaa@gmail.com', '01139364706', '$2y$10$QINSiPXpK470cDZFw26wzO37KXE7PO/fzdioju8/hd27DbIIVd2Ty', NULL, NULL, '2026-04-01 02:54:25', NULL, 'user', NULL);
+(9, 'qayla isabella', 'im.qylaaaaa@gmail.com', '01139364706', '$2y$10$QINSiPXpK470cDZFw26wzO37KXE7PO/fzdioju8/hd27DbIIVd2Ty', NULL, NULL, '2026-04-01 02:54:25', NULL, 'user', NULL),
+(10, 'nini', 'niniz@gmail.com', '0195711302', '$2y$10$qQiMrZK46DK/OeK2Wc/EOufDrK.L7ittEWxf9fmPoC4TLUaWVoyJ2', NULL, NULL, '2026-04-01 08:48:28', NULL, 'user', NULL);
 
 --
 -- Indexes for dumped tables
@@ -478,6 +511,12 @@ INSERT INTO `users` (`id`, `name`, `gmail`, `phone`, `password`, `reset_token`, 
 -- Indexes for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `branches`
+--
+ALTER TABLE `branches`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -543,6 +582,12 @@ ALTER TABLE `activity_logs`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
+-- AUTO_INCREMENT for table `branches`
+--
+ALTER TABLE `branches`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
 -- AUTO_INCREMENT for table `favorites`
 --
 ALTER TABLE `favorites`
@@ -564,13 +609,13 @@ ALTER TABLE `menu_items`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=74;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=81;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
 
 --
 -- AUTO_INCREMENT for table `staff`
@@ -582,7 +627,7 @@ ALTER TABLE `staff`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- Constraints for dumped tables
