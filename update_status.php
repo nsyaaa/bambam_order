@@ -7,7 +7,7 @@ if (isset($_POST['status']) && !isset($_POST['id'])) {
     
     $stmt = $pdo->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = 'global_store_status'");
     if ($stmt->execute([$status])) {
-        echo "SUCCESS";
+        echo "Success";
     }
 } 
 // 2. Handle Order Status Update (Existing Functionality)
