@@ -407,13 +407,11 @@ case 'reset_user_password':
 
             // --- SYSTEM SETTINGS ---
             case 'toggle_store':
-                if (isset($_POST['status'])) {
-                    $newStatus = $_POST['status'] === 'open' ? 'open' : 'closed';
-                    $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES ('store_status', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
-                    $stmt->execute([$newStatus, $newStatus]);
-                    $message = "Store is now " . strtoupper($newStatus);
-                    logActivity($pdo, $currentUserId, $currentUserName, "Store Status", "Changed to $newStatus");
-                }
+                $newStatus = isset($_POST['status']) ? 'open' : 'closed';
+                $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES ('global_store_status', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+                $stmt->execute([$newStatus, $newStatus]);
+                $message = "Store is now " . strtoupper($newStatus);
+                logActivity($pdo, $currentUserId, $currentUserName, "Store Status", "Changed to $newStatus");
                 break;
         }
     }
@@ -625,6 +623,11 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // Fetch Activity Logs
     $stmt = $pdo->query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 50");
     $activityLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
+    // Fetch Store Status
+    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
+    $storeStatus = $stmt->fetchColumn() ?: 'open';
 
     // STEP 2: Fetch Global Store Status
     $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
@@ -1969,19 +1972,9 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <label style="font-size:10px; color:#a0aec0; font-weight:bold;">END DATE</label>
                     <input type="date" name="report_end" value="<?php echo $reportEnd; ?>" style="padding:8px; border-radius:5px; border:1px solid rgba(255,255,255,0.1); background:#373359; color:white; color-scheme:dark;">
                 </div>
-                <button type="submit" class="btn-primary" style="height:38px; margin-top:14px;">Filter</button>
-<<<<<<< HEAD
-                <button type="button" 
-                        onclick="window.location.href='export_orders.php?report_start=<?php echo $reportStart; ?>&report_end=<?php echo $reportEnd; ?>'" 
-                        class="btn-success" 
-                        style="height:38px; margin-top:14px; background: #28a745; color: white; border: none; padding: 0 15px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-file-excel"></i>
-                    Export Excel
-                </button>
-=======
+                <button type="submit" class="btn-primary" style="height:38px; margin-top:14px; margin-right: 5px;">Filter</button>
+                <button type="button" onclick="window.location.href='export_orders.php?report_start=<?php echo $reportStart; ?>&report_end=<?php echo $reportEnd; ?>'" class="btn-primary" style="height:38px; margin-top:14px; background: #166534; border-color: #166534; margin-right: 5px;"><i class="fas fa-file-excel"></i> Export Excel</button>
                 <button type="button" onclick="window.open('print_report.php?start=<?php echo $reportStart; ?>&end=<?php echo $reportEnd; ?>', '_blank')" class="btn-primary" style="height:38px; margin-top:14px; background: #3498db; border-color: #3498db;"><i class="fas fa-print"></i> Print Report</button>
-                <button type="button" onclick="window.location.href='export_excel.php?start=<?php echo $reportStart; ?>&end=<?php echo $reportEnd; ?>'" class="btn-primary" style="height:38px; margin-top:14px; background: #166534; border-color: #166534;"><i class="fas fa-file-excel"></i> Export Excel</button>
->>>>>>> cc0ac60c5ff768d1b7fd0dc6d5f26c24782f8ee4
             </form>
             <div class="filter-pills" style="margin:0;">
                 <a href="?view=reports&report_start=<?php echo date('Y-m-d'); ?>&report_end=<?php echo date('Y-m-d'); ?>" class="filter-pill">Today</a>

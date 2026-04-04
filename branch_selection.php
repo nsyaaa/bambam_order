@@ -2,152 +2,159 @@
 include 'header.php'; 
 include_once 'db.php';
 
-// Check global status first
 $globalStoreStatus = 'open';
 $openBranches = [];
 try {
-    // Enforce branch availability using system_settings
     $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
     $globalStoreStatus = trim(strtolower($stmt->fetchColumn() ?: 'open'));
 
-    // Only fetch branches if the store is globally open
     if ($globalStoreStatus === 'open') {
         $stmt = $pdo->query("SELECT name, phone FROM branches WHERE is_open = 1 ORDER BY name ASC");
         $openBranches = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // DEBUGGING: If no branches show up, check the HTML source code (Ctrl+U)
-        if (empty($openBranches)) {
-            $debugStmt = $pdo->query("SELECT * FROM branches");
-            $allData = $debugStmt->fetchAll(PDO::FETCH_ASSOC);
-            echo "<!-- DEBUG: Branches in DB: " . print_r($allData, true) . " -->";
-        }
     }
 } catch (Exception $e) {}
 ?>
 
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800&family=Plus+Jakarta+Sans:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
 <style>
     body {
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        margin: 0;
-        padding-top: 120px;
+        overflow-x: hidden;
     }
 
-    .branch-select-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 40px 20px;
+    /* --- Floating Food Assets --- */
+    .bg-asset {
+        position: fixed;
+        z-index: -1;
+        pointer-events: none;
+        filter: drop-shadow(0 10px 15px rgba(0,0,0,0.05));
+    }
+    .fries  { top: 10%; left: -20px; width: 180px; transform: rotate(-10deg); }
+    .tomato { top: 45%; left: -30px; width: 150px; }
+    .nugget { bottom: 15%; right: 5%; width: 120px; }
+    .bun    { bottom: -30px; right: 10%; width: 250px; }
+    .veggie { top: 15%; right: -20px; width: 140px; }
+
+    /* --- Navbar Styling --- */
+    .navbar {
+        background: #ff5722; /* Branding Orange */
+        padding: 15px 5%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: white;
+    }
+    .logo { font-weight: 800; font-size: 1.6rem; }
+    .nav-right { display: flex; align-items: center; gap: 15px; font-size: 0.9rem; }
+    .menu-icon { font-size: 1.5rem; cursor: pointer; }
+
+    /* --- Main Container --- */
+    .selection-container {
         text-align: center;
+        padding: 80px 5%;
     }
 
-    /* Bold Header with Premium Spacing */
-    .branch-select-container h2 {
-        font-family: 'Playfair Display', serif;
-        font-size: 52px;
+    .title {
+        font-size: 2.8rem;
+        font-weight: 900;
+        margin-bottom: 50px;
         text-transform: uppercase;
         color: #ffffff;
-        margin-bottom: 60px;
-        letter-spacing: -2px;
     }
+    .title span { color: #ff5722; }
 
-    .branch-select-container h2 span {
-        color: #ff5100;
-    }
-
-    /* The Fix: Centered Flex Grid */
+    /* --- Grid & Cards --- */
     .branch-grid {
         display: flex;
         flex-wrap: wrap;
-        justify-content: center; /* This ensures the bottom row is perfectly centered */
+        justify-content: center;
         gap: 30px;
-        max-width: 1000px;
+        max-width: 700px; /* Forces wrap after 3 items (190px * 3 + gaps) */
         margin: 0 auto;
     }
 
-    /* Premium Card Design */
-    .branch-option-card {
-        background: #181818;
-        border-radius: 16px;
-        padding: 50px 30px;
-        width: 260px;
-        cursor: pointer;
-        transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+    @media (max-width: 768px) {
+        .branch-grid {
+            max-width: 450px; /* Forces wrap after 2 items on smaller screens */
+            gap: 20px;
+        }
+    }
+
+    .card {
+        background: #ffffff;
+        width: 190px;
+        height: 190px;
+        border-radius: 25px;
         display: flex;
         flex-direction: column;
+        justify-content: center;
         align-items: center;
-        border: 1px solid #333;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05); /* Soft premium shadow */
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
     }
 
-    /* Icon Styling */
-    .branch-option-card i {
-        font-size: 48px;
-        color: #ff5100;
-        margin-bottom: 25px;
-        transition: transform 0.3s ease;
+    /* Icon Colors based on your image */
+    .card i { font-size: 2.5rem; color: #ff5722; margin-bottom: 12px; }
+    .card p { font-weight: 700; color: #333; margin: 0; }
+
+    /* --- The EXACT Active State (Jejawi Look) --- */
+    .card.active {
+        background: #222; /* Dark card */
+        transform: scale(1.05);
+        box-shadow: 0 15px 35px rgba(255, 87, 34, 0.2);
+    }
+    .card.active p { color: #fff; }
+    .card.active i { color: #ff5722; }
+
+    .card:hover:not(.active) {
+        background: #222; /* Card turns black on hover */
+        transform: translateY(-10px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
     }
 
-    .branch-option-card h3 {
-        margin: 0;
-        font-size: 22px;
-        font-weight: 600;
-        color: #fff;
-        transition: color 0.3s ease;
+    .card:hover:not(.active) p {
+        color: #fff; /* Text turns white on hover */
     }
 
-    /* THE ATTRACTIVE PART: Smooth Dark Hover */
-    .branch-option-card:hover {
-        background: #222;
-        transform: translateY(-15px) scale(1.02);
-        box-shadow: 0 30px 60px rgba(255, 81, 0, 0.25);
-        border-color: #ff5100;
+    .card:hover:not(.active) i {
+        animation: icon-interact 0.5s ease infinite alternate; /* Icon animation */
     }
 
-    .branch-option-card:hover h3 {
-        color: #ffffff;
-    }
-
-    .branch-option-card:hover i {
-        transform: scale(1.2) rotate(-5deg);
-    }
-
-    /* Animation for initial page load */
-    .animate-up {
-        animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-
-    @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(40px); }
-        to { opacity: 1; transform: translateY(0); }
+    @keyframes icon-interact {
+        from { transform: scale(1) translateY(0); }
+        to { transform: scale(1.2) translateY(-5px); }
     }
 </style>
 
-<div class="branch-select-container animate-up">
-    <h2>Choose Your <span>Branch</span></h2>
+<img src="images/fries.png" class="bg-asset fries" alt="">
+<img src="images/tomato.png" class="bg-asset tomato" alt="">
+<img src="images/nugget.png" class="bg-asset nugget" alt="">
+<img src="images/bun.png" class="bg-asset bun" alt="">
+<img src="images/veggie.png" class="bg-asset veggie" alt="">
+
+<main class="selection-container">
+    <h1 class="title">CHOOSE YOUR <span>BRANCH</span></h1>
     
     <div class="branch-grid">
-        <?php if ($globalStoreStatus !== 'open'): ?>
-            <div style="grid-column: 1 / -1; background: #181818; padding: 40px; border-radius: 15px; border: 1px solid #333;">
-                <h3 style="color: #e74c3c;">Store is currently closed. Please try again later.</h3>
-                <p style="color: #aaa;">Please check back later. We're sorry for the inconvenience.</p>
+        <?php foreach($openBranches as $branch): ?>
+            <div class="card" 
+                 onclick="selectBranch('<?php echo htmlspecialchars($branch['name']); ?>')">
+                
+                <?php 
+                    // Dynamic icons to match your pic
+                    $icon = "fa-store";
+                    if($branch['name'] == 'Kangar') $icon = "fa-utensils";
+                    if($branch['name'] == 'Jejawi') $icon = "fa-hamburger";
+                    if($branch['name'] == 'Kuala Perlis') $icon = "fa-map-marker-alt";
+                    if($branch['name'] == 'Beseri') $icon = "fa-fire";
+                ?>
+
+                <i class="fas <?php echo $icon; ?>"></i>
+                <p><?php echo htmlspecialchars($branch['name']); ?></p>
             </div>
-        <?php elseif (empty($openBranches)): ?>
-            <div style="grid-column: 1 / -1; background: #181818; padding: 40px; border-radius: 15px; border: 1px solid #333;">
-                <h3 style="color: #ff5100;">No Branches Available</h3>
-                <p style="color: #aaa;">Please check back later.</p>
-            </div>
-        <?php else: ?>
-            <?php foreach($openBranches as $branch): ?>
-                <div class="branch-option-card" onclick="selectBranch('<?php echo htmlspecialchars($branch['name']); ?>')">
-                    <i class="fas fa-store"></i>
-                    <h3><?php echo htmlspecialchars($branch['name']); ?></h3>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
+        <?php endforeach; ?>
     </div>
-</div>
+</main>
 
 <script>
 function selectBranch(branch) { 

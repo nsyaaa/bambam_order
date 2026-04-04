@@ -240,8 +240,8 @@ function removeLayer(index) {
 }
 
 function resetBuilder() {
-    layers = [{ type: 'bun-bottom', price: 1.00, name: 'Bottom Bun' }];
-    totalPrice = 1.00;
+    layers = [];
+    totalPrice = 0;
     renderLayers();
     updatePrice();
 }
