@@ -27,6 +27,7 @@ try {
     // Add columns to menu_items if they don't exist
     try { $pdo->query("SELECT is_available FROM menu_items LIMIT 1"); } catch (Exception $e) { $pdo->exec("ALTER TABLE menu_items ADD COLUMN is_available TINYINT(1) NOT NULL DEFAULT 1"); }
     try { $pdo->query("SELECT cost_price FROM menu_items LIMIT 1"); } catch (Exception $e) { $pdo->exec("ALTER TABLE menu_items ADD COLUMN cost_price DECIMAL(10, 2) DEFAULT 0.00"); }
+    try { $pdo->query("SELECT image FROM menu_items LIMIT 1"); } catch (Exception $e) { $pdo->exec("ALTER TABLE menu_items ADD COLUMN image VARCHAR(255) NULL AFTER variants"); }
     // Add columns for review moderation
     try { $pdo->query("SELECT review_is_approved FROM orders LIMIT 1"); } catch (Exception $e) { $pdo->exec("ALTER TABLE orders ADD COLUMN review_is_approved TINYINT(1) NOT NULL DEFAULT 1 AFTER admin_reply"); }
     // Ensure global_store_status exists
@@ -262,7 +263,25 @@ case 'reset_user_password':
                             }
                         }
                         $variants = !empty($variantsData) ? json_encode($variantsData) : null;
-                        $stmt = $pdo->prepare("INSERT INTO menu_items (category, name, description, price, cost_price, has_protein, variants) VALUES (?, ?, ?, ?, ?, ?, ?)");
+
+                        // Handle Image Upload
+                        $image_name = null;
+                        if (isset($_FILES['item_image']) && $_FILES['item_image']['error'] !== UPLOAD_ERR_NO_FILE) {
+                            $file = $_FILES['item_image'];
+                            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                            $allowed = ['jpg', 'jpeg', 'png'];
+                            if (!in_array($ext, $allowed)) { throw new Exception("Invalid file type. Only JPG, JPEG, and PNG are allowed."); }
+                            
+                            $uploadDir = 'uploads/menu/';
+                            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+                            
+                            $image_name = time() . '_' . preg_replace('/[^a-z0-9.]/i', '_', $file['name']);
+                            if (!move_uploaded_file($file['tmp_name'], $uploadDir . $image_name)) { throw new Exception("Failed to save uploaded image."); }
+                        } else {
+                            throw new Exception("Please upload an image for the menu item.");
+                        }
+
+                        $stmt = $pdo->prepare("INSERT INTO menu_items (category, name, description, price, cost_price, has_protein, variants, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                         $stmt->execute([
                             $_POST['category'], 
                             $_POST['name'], 
@@ -270,11 +289,12 @@ case 'reset_user_password':
                             $_POST['price'], 
                             $_POST['cost_price'] ?? 0.00,
                             isset($_POST['has_protein']) ? 1 : 0, 
-                            $variants
+                            $variants,
+                            $image_name
                         ]);
                         $message = "Menu item created successfully!";
                         logActivity($pdo, $currentUserId, $currentUserName, "Create Menu", "Added: {$_POST['name']}");
-                    } catch (PDOException $e) { $message = "Error: " . $e->getMessage(); }
+                    } catch (Exception $e) { $message = "Error: " . $e->getMessage(); }
                 }
                 break;
 
@@ -1797,7 +1817,7 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div id="view-menu" class="view-section">
         <div class="panel-card">
             <h3 style="margin-top:0; color: #ffffff;">➕ Add New Menu Item</h3>
-            <form method="POST" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+            <form method="POST" enctype="multipart/form-data" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
                 <input type="hidden" name="action" value="create_menu_item">
                 <div class="form-group"><label>Category</label><select name="category" required><option value="burger">Burger</option><option value="special">Special</option><option value="addon">Add-On</option><option value="minuman">Minuman</option></select></div>
                 <div class="form-group" style="grid-column: span 2;"><label>Item Name</label><input type="text" name="name" placeholder="e.g. Lava Cheese Burger" required></div>
@@ -1811,6 +1831,11 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <!-- Dynamic variants will be added here by JS -->
                     </div>
                     <button type="button" onclick="addVariantRow('add-variants-container')" class="btn-neutral" style="margin-top: 10px; width: fit-content; padding: 8px 12px;">+ Add Variant</button>
+                </div>
+                <div class="form-group" style="grid-column: span 3;">
+                    <label>Menu Image (JPG, PNG, JPEG)</label>
+                    <input type="file" name="item_image" accept=".jpg,.jpeg,.png" onchange="previewImage(this, 'add-item-preview')" required>
+                    <img id="add-item-preview" style="max-width: 150px; margin-top: 10px; border-radius: 8px; display: none;">
                 </div>
                 <button type="submit" class="btn-primary" style="grid-column: span 3;">Add Item</button>
             </form>
@@ -1845,7 +1870,7 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     if ($lowerName === 'beef smash burger') $imgFilename = 'smash.jpg';
                     if ($lowerName === 'wagyu burger') $imgFilename = 'wagyu.jpg';
                     if ($lowerName === 'burger sate ayam') $imgFilename = 'sate.jpg';
-                    $imagePath = "images/{$imgFilename}";
+                    $imagePath = !empty($item['image']) ? "uploads/menu/" . $item['image'] : "images/{$imgFilename}";
                 ?>
                     <div class="menu-card <?php echo !$isAvailable ? 'sold-out' : ''; ?>" data-category="<?php echo htmlspecialchars($item['category']); ?>">
                         <div class="menu-card-img" style="background-image: url('<?php echo $imagePath; ?>');">
@@ -2224,6 +2249,20 @@ function switchView(viewId, navItem) {
     // Update Sidebar Active State
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     navItem.classList.add('active');
+}
+
+function previewImage(input, previewId) {
+    const preview = document.getElementById(previewId);
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        preview.style.display = 'none';
+    }
 }
 
 function addVariantRow(containerId, name = '', price = '') {
