@@ -2,25 +2,20 @@
 // ===============================
 // Bambam Burger - Forgot Pass (Full Fixed Version)
 // ===============================
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+if (file_exists(__DIR__ . '/vendor/autoload.php')) { require_once __DIR__ . '/vendor/autoload.php'; }
+
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 include 'db.php';
 include 'header.php'; // Included at top so design shows up
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
 $msg = ""; 
 $debug_info = ""; 
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Check for PHPMailer
-    if (file_exists('vendor/autoload.php')) {
-        require 'vendor/autoload.php';
-    } else {
-        $msg = "<span style='color:red'>Error: 'vendor/autoload.php' not found. Run 'composer require phpmailer/phpmailer'</span>";
-    }
-
-    if (empty($msg)) {
+    if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
         $gmail = trim($_POST['gmail']);
 
         try {
@@ -41,8 +36,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $stmt2->execute([$token, $expire, $user['id']]);
 
                 // 4. Send Email
-                $mail = new PHPMailer(true);
                 try {
+                    $mail = new PHPMailer(true);
+
                     // --- PREVENT INFINITE LOADING ---
                     $mail->Timeout = 10;
                     $mail->SMTPConnectTimeout = 10;
@@ -83,13 +79,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                     $mail->send();
                     $msg = "<span style='color:green'><b>Success!</b> Reset link sent to your Gmail.</span>";
-                } catch (Exception $e) {
-                    $msg = "<span style='color:red'><b>Mailer Error:</b> " . $mail->ErrorInfo . "</span>";
+                } catch (Throwable $e) {
+                    $msg = "<span style='color:red'><b>Mailer Error:</b> " . $e->getMessage() . "</span>";
                 }
             }
         } catch (PDOException $e) {
             $msg = "<span style='color:red'>Database Error: " . $e->getMessage() . "</span>";
         }
+    } else {
+        $msg = "<span style='color:red'>Email library missing. Run 'composer require phpmailer/phpmailer'</span>";
     }
 }
 ?>

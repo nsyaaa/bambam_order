@@ -1252,6 +1252,7 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <i class="fas fa-receipt"></i> Orders 
         <?php if($pendingOrdersCount > 0): ?><span class="badge"><?php echo $pendingOrdersCount; ?></span><?php endif; ?>
     </div>
+    <div class="nav-item" data-view="leave-mgmt" onclick="switchView('leave-mgmt', this); loadAllLeaves();"><i class="fas fa-calendar-check"></i> Leave Mgmt</div>
     <?php if($canManageStaff): ?><div class="nav-item" data-view="staff" onclick="switchView('staff', this)"><i class="fas fa-users"></i> Staff</div><?php endif; ?>
     <div class="nav-item" data-view="reviews" onclick="switchView('reviews', this)"><i class="fas fa-star"></i> Reviews</div>
     <div class="nav-item" data-view="menu" onclick="switchView('menu', this)"><i class="fas fa-utensils"></i> Menu</div>
@@ -1695,6 +1696,27 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </tbody>
                 </table>
             <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- VIEW: LEAVE MANAGEMENT -->
+    <div id="view-leave-mgmt" class="view-section">
+        <div class="panel-card">
+            <h3 style="margin:0 0 20px 0; color: #ffffff;">📋 Staff Leave Requests</h3>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Staff / Branch</th>
+                        <th>Type</th>
+                        <th>Dates</th>
+                        <th>Reason / Attachment</th>
+                        <th class="text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="all-leaves-container">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -2249,6 +2271,21 @@ function switchView(viewId, navItem) {
     // Update Sidebar Active State
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     navItem.classList.add('active');
+}
+
+function updateLeave(id, status) {
+    if(!confirm("Are you sure you want to " + status + " this request?")) return;
+    
+    const formData = new FormData();
+    formData.append('id', id);
+    formData.append('status', status);
+
+    fetch('update_leave_status.php', { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) { location.reload(); }
+        else { alert("Error: " + data.message); }
+    });
 }
 
 function previewImage(input, previewId) {

@@ -52,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // ✅ CUSTOMER LOGIN
             $_SESSION['user_id']   = $user['id'];
             $_SESSION['user_name'] = $user['name'];
+            $_SESSION['user_email'] = $gmail;
 
             // Safe JS encoding
             $jsName = json_encode($user['name']);

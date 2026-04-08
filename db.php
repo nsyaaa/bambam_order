@@ -29,3 +29,15 @@ $smtpHost = 'smtp.gmail.com';
 $smtpUser = 'bambamburgerperlis@gmail.com'; 
 $smtpPass = 'hosufxcgdwzjwgam'; 
 $smtpPort = 587;
+
+// ToyyibPay Config
+$toyyibpay_secret_key = 'mkrptmnl-i33m-67op-m3wa-oeri0bqap5im'; // Updated Secret Key
+$toyyibpay_category_code = 'uhsujxao'; // Updated Category Code
+$toyyibpay_url = 'https://toyyibpay.com/'; // Use https://dev.toyyibpay.com/ for sandbox
+
+// Compatibility shim for PHP < 8.0
+if (!function_exists('str_contains')) {
+    function str_contains($haystack, $needle) {
+        return $needle !== '' && mb_strpos($haystack, $needle) !== false;
+    }
+}

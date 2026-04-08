@@ -24,16 +24,21 @@
         <input type="text" name="customer_name" required placeholder="Your Name">
 
         <label>Payment Method</label>
-        <select name="payment_method" required>
-            <option value="Online Transfer">Online Transfer</option>
-            <option value="E-Wallet">E-Wallet (TNG/Grab)</option>
+        <select name="payment_method" Online Payment (ToyyibPay)</option>
             <option value="Cash">Cash on Pickup</option>
         </select>
 
-        <label>Upload Receipt</label>
-        <input type="file" name="receipt" accept="image/*" required>
+        <div id="payment-details" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; margin: 15px 0; border: 1px dashed #FFA500; text-align: center;">
+            <div id="tng-info">
+                <p style="color:#FFA500; font-weight:bold; margin-top:0;">Scan to Pay via TnG</p>
+                <img src="images/tng_qr.png" alt="TnG QR Code" style="width:200px; height:200px; background:white; padding:10px; border-radius:10px; margin-bottom:10px;" onerror="this.src='https://via.placeholder.com/200?text=TnG+QR+Code'">
+                <p style="font-size:0.85rem; color:#ccc;">Please upload the screenshot of your transaction below.</p>
+            </div>
+        </div>
 
-        <button type="submit" class="btn-submit">Order Now 🍔</button>
+        <label>Upload Receipt</label>
+        <input type="file" name="receipt" id="receipt_upload" accept="image/*" required>
+on>
     </form>
 </div>
 
@@ -79,6 +84,18 @@ document.getElementById('checkoutForm').onsubmit = function() {
     console.log("Sending Total:", totalValue); // Debugging
     return true; 
 };
+
+function togglePaymentUI() {
+    const method = document.getElementById('payment_method').value;
+    const details = document.getElementById('payment-details');
+    const upload = document.getElementById('receipt_upload');
+    
+    details.style.display = (method === 'TnG') ? 'block' : 'none';
+    upload.required = (method === 'TnG');
+    upload.style.display = (method === 'Cash' || method === 'ToyyibPay') ? 'none' : 'block';
+    upload.previousElementSibling.style.display = (method === 'Cash' || method === 'ToyyibPay') ? 'none' : 'block';
+}
+window.onload = togglePaymentUI;
 </script>
 
 <?php include 'footer.php'; ?>

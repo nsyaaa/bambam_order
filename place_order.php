@@ -1,4 +1,9 @@
 <?php
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+if (file_exists(__DIR__ . '/vendor/autoload.php')) { require_once __DIR__ . '/vendor/autoload.php'; }
+
 session_start();
 include_once 'db.php';
 header('Content-Type: application/json');
@@ -7,14 +12,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Auto-fix: Check if 'customization' column exists, if not add it
     try {
         // Add payment status columns if they don't exist (for robustness)
-        try { $pdo->query("SELECT payment_status FROM orders LIMIT 1"); } catch (Exception $e) { $pdo->exec("ALTER TABLE orders ADD COLUMN payment_status VARCHAR(50) NOT NULL DEFAULT 'Pending' AFTER payment_method"); }
-        try { $pdo->query("SELECT paid_at FROM orders LIMIT 1"); } catch (Exception $e) { $pdo->exec("ALTER TABLE orders ADD COLUMN paid_at TIMESTAMP NULL DEFAULT NULL AFTER payment_status"); }
-        try { $pdo->query("SELECT processed_by_staff_id FROM orders LIMIT 1"); } catch (Exception $e) { $pdo->exec("ALTER TABLE orders ADD COLUMN processed_by_staff_id INT NULL AFTER paid_at"); }
+        try { $pdo->query("SELECT payment_status FROM orders LIMIT 1"); } catch (Throwable $e) { $pdo->exec("ALTER TABLE orders ADD COLUMN payment_status VARCHAR(50) NOT NULL DEFAULT 'Pending' AFTER payment_method"); }
+        try { $pdo->query("SELECT paid_at FROM orders LIMIT 1"); } catch (Throwable $e) { $pdo->exec("ALTER TABLE orders ADD COLUMN paid_at TIMESTAMP NULL DEFAULT NULL AFTER payment_status"); }
+        try { $pdo->query("SELECT processed_by_staff_id FROM orders LIMIT 1"); } catch (Throwable $e) { $pdo->exec("ALTER TABLE orders ADD COLUMN processed_by_staff_id INT NULL AFTER paid_at"); }
         $pdo->query("SELECT customization FROM order_items LIMIT 1");
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         try {
             $pdo->exec("ALTER TABLE order_items ADD COLUMN customization TEXT DEFAULT NULL");
-        } catch (Exception $ex) {
+        } catch (Throwable $ex) {
             // Continue and let the transaction fail if schema is still wrong
         }
     }
@@ -22,14 +27,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Auto-fix: Check if 'address' column exists
     try {
         $pdo->query("SELECT address FROM orders LIMIT 1");
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         $pdo->exec("ALTER TABLE orders ADD COLUMN address TEXT DEFAULT NULL");
     }
     
     // Auto-fix: Check if 'customer_phone' column exists
     try {
         $pdo->query("SELECT customer_phone FROM orders LIMIT 1");
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         $pdo->exec("ALTER TABLE orders ADD COLUMN customer_phone VARCHAR(20) DEFAULT NULL AFTER customer_name");
     }
 
@@ -109,11 +114,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $orderId = $pdo->lastInsertId();
 
+        // --- TOYYIBPAY INTEGRATION ---
+        if ($_POST['payment_method'] === 'ToyyibPay') {
+            $billAmount = (int)round((float)$_POST['total'] * 100); // Convert RM to cents
+            
+            $bill_data = array(
+                'userSecretKey' => $toyyibpay_secret_key,
+                'categoryCode' => $toyyibpay_category_code,
+                'billName' => 'BamBam Burger Order #' . $orderId,
+                'billDescription' => 'Payment for Order #' . $orderId,
+                'billPriceSetting' => 1,
+                'billPayorInfo' => 1,
+                'billAmount' => $billAmount,
+                'billReturnUrl' => 'http://' . $_SERVER['HTTP_HOST'] . rtrim(str_replace('\\', '/', dirname($_SERVER['PHP_SELF'])), '/') . '/toyyibpay_return.php?order_id=' . $orderId,
+                'billCallbackUrl' => 'http://' . $_SERVER['HTTP_HOST'] . rtrim(str_replace('\\', '/', dirname($_SERVER['PHP_SELF'])), '/') . '/toyyibpay_callback.php',
+                'billExternalReferenceNo' => $orderId,
+                'billTo' => $customerName,
+                'billEmail' => $_SESSION['user_email'] ?? 'customer@bambam.com',
+                'billPhone' => $customerPhone ?? '0123456789',
+            );
+
+            $curl = curl_init();
+            curl_setopt($curl, CURLOPT_POST, 1);
+            curl_setopt($curl, CURLOPT_URL, $toyyibpay_url . 'index.php/api/createBill');  
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $bill_data);
+            $result = curl_exec($curl);
+            curl_close($curl);
+            
+            $obj = json_decode($result);
+
+            if (isset($obj[0]->BillCode)) {
+                $pdo->commit(); // Save order to DB before leaving the site
+                echo json_encode(['success' => true, 'redirect_url' => $toyyibpay_url . $obj[0]->BillCode]);
+                exit;
+            } else {
+                throw new \Exception("ToyyibPay Error: Unable to generate payment link.");
+            }
+        }
+        // --- END TOYYIBPAY ---
+
         // 3. Insert into 'order_items' table
         $items = json_decode($_POST['items'], true);
         if ($items) {
+            // Server-side Validation: Custom burgers must contain at least a Bun or a Patty
+            foreach ($items as $item) {
+                if (isset($item['name']) && $item['name'] === 'Custom Burger') {
+                    $customization = strtolower($item['note'] ?? ($item['customization'] ?? ''));
+                    $hasBase = str_contains($customization, 'bun') || str_contains($customization, 'patty');
+                    
+                    if (!$hasBase) {
+                        throw new Exception("Custom Burger Error: You must include at least one Bun or a Patty. Orders consisting only of toppings are not allowed.");
+                    }
+                }
+            }
+
             $itemStmt = $pdo->prepare("INSERT INTO order_items (order_id, item_name, protein, variant, price, qty, customization) VALUES (?, ?, ?, ?, ?, ?, ?)");
             foreach ($items as $item) {
+                // Combine burger layers (customization) and any additional user notes
+                $layers = $item['customization'] ?? '';
+                $userNote = $item['note'] ?? '';
+                $combinedDetails = $layers;
+                if (!empty($userNote)) {
+                    $combinedDetails .= (!empty($combinedDetails) ? " | Extra Note: " : "") . $userNote;
+                }
+
                 $itemStmt->execute([
                     $orderId,
                     $item['name'],
@@ -121,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $item['variant'],
                     $item['price'],
                     $item['qty'],
-                    $item['note'] ?? ($item['customization'] ?? '')
+                    $combinedDetails
                 ]);
             }
         }
@@ -133,19 +198,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $emailError = "";
 
         // Use PHPMailer for reliable delivery (SMTP)
-        $autoloadPath = __DIR__ . '/vendor/autoload.php';
-        if (file_exists($autoloadPath)) {
-            require_once $autoloadPath;
-            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-            
+        if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
             try {
+                $mail = new PHPMailer(true);
+                
                 // Server settings (Variables from db.php)
                 $mail->isSMTP();
                 $mail->Host       = $smtpHost;
                 $mail->SMTPAuth   = true;
                 $mail->Username   = $smtpUser;
                 $mail->Password   = $smtpPass;
-                $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->Port       = $smtpPort;
 
                 // A. Email to Admin
@@ -173,13 +236,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 $emailStatus = "Sent via PHPMailer";
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 $emailStatus = "PHPMailer Failed";
-                $emailError = $mail->ErrorInfo;
+                $emailError = $e->getMessage();
             }
         } else {
             // Fallback: PHPMailer not installed
-            $emailStatus = "PHPMailer not installed. Expected at: " . $autoloadPath;
+            $emailStatus = "PHPMailer not installed. Please run 'composer require phpmailer/phpmailer'.";
             // Try basic mail() as last resort (works for local Laragon mail catcher)
             $headers = "From: no-reply@bambamburger.com";
             @mail("bambamburgerperlis@gmail.com", "New Order #$orderId", "Order from $customerName", $headers);
@@ -191,8 +254,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'email_status' => $emailStatus, 
             'email_error' => $emailError
         ]);
-
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
+        // Throwable catches both Exceptions and Fatal Errors (PHP 7+)
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }

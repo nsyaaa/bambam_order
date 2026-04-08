@@ -470,7 +470,10 @@ $current = $stages[$status] ?? $stages['placed'];
                 <div style="margin-top:10px;"><div class="meta-label">BRANCH</div><div><?php echo htmlspecialchars($order['branch']); ?></div></div>
                 <div style="text-align:right; margin-top:10px;"><div class="meta-label">ORDER TYPE</div><div><?php echo htmlspecialchars($order['order_type']); ?></div></div>
                 
-                <div style="margin-top:10px;"><div class="meta-label">PAYMENT</div><div><?php echo htmlspecialchars($order['payment_method']); ?></div></div>
+                <div style="margin-top:10px;"><div class="meta-label">PAYMENT METHOD</div><div><?php 
+                    $pm = $order['payment_method'];
+                    echo ($pm === 'TnG') ? 'TnG E-Wallet' : (($pm === 'ToyyibPay') ? 'Online Banking (ToyyibPay)' : htmlspecialchars($pm)); 
+                ?></div></div>
                 <div style="text-align:right; margin-top:10px;"><div class="meta-label">PAYMENT STATUS</div><div style="font-weight:bold; color: <?php echo $isPaid ? '#2ecc71' : '#f1c40f'; ?>;"><?php echo htmlspecialchars($order['payment_status'] ?? 'Pending'); ?></div></div>
 
                 <?php if ($isPaid && !empty($order['paid_at'])): ?>

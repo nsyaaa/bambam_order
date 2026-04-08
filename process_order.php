@@ -35,6 +35,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // 3. Insert into 'orders' table
         $stmt = $pdo->prepare("INSERT INTO orders (user_id, branch, order_type, customer_name, customer_phone, total_amount, payment_method, receipt_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
+        
+        // Validation: Custom burgers must contain at least a Bun or a Patty
+        if (!empty($items)) {
+            foreach ($items as $item) {
+                if (isset($item['name']) && $item['name'] === 'Custom Burger') {
+                    $customization = strtolower($item['note'] ?? ($item['customization'] ?? ''));
+                    $hasBase = str_contains($customization, 'bun') || str_contains($customization, 'patty');
+                    if (!$hasBase) {
+                        throw new Exception("Custom Burger Error: A burger must include at least one Bun or a Patty.");
+                    }
+                }
+            }
+        }
+
         $stmt->execute([$user_id, $branch, $order_type, $name, $customerPhone, $total, $method, $receipt_name]);
         $order_id = $pdo->lastInsertId();
 

@@ -190,6 +190,10 @@ $branch_name = $_SESSION['branch_name'];
     .order-card.status-Preparing { border-left-color: var(--primary); }
     .order-card.status-Ready { border-left-color: var(--success); }
     .order-card.status-Served { border-left-color: var(--dark); opacity: 0.7; }
+    .status-badge-leave { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+    .leave-Pending { background: #fff3cd; color: #856404; }
+    .leave-Approved { background: #d4edda; color: #155724; }
+    .leave-Rejected { background: #f8d7da; color: #721c24; }
 
     .order-header { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
     .order-id { font-weight: 800; font-size: 20px; color: var(--primary); }
@@ -370,6 +374,7 @@ $branch_name = $_SESSION['branch_name'];
     <a href="#" class="nav-item active" onclick="switchView('dashboard', this)"><i class="fas fa-th-large"></i> Dashboard</a>
     <a href="#" class="nav-item" onclick="switchView('orders', this); loadOrderHistory();"><i class="fas fa-receipt"></i> Orders</a>
     <a href="#" class="nav-item" onclick="switchView('stock', this); loadStock();"><i class="fas fa-box-open"></i> Stock</a>
+    <a href="#" class="nav-item" onclick="switchView('leave', this); loadLeaveHistory();"><i class="fas fa-calendar-minus"></i> Leave</a>
     <a href="#" class="nav-item" onclick="switchView('shifts', this); loadShifts();"><i class="fas fa-calendar-alt"></i> Shifts</a>
     <a href="#" class="nav-item" onclick="switchView('staff', this); loadStaffList();"><i class="fas fa-users"></i> Staff</a>
     <a href="#" class="nav-item" onclick="switchView('profile', this); loadClockHistory();"><i class="fas fa-user"></i> Profile</a>
@@ -508,6 +513,51 @@ $branch_name = $_SESSION['branch_name'];
     </div>
     </div> <!-- END VIEW: DASHBOARD -->
 
+    <!-- VIEW: LEAVE MANAGEMENT -->
+    <div id="view-leave" class="view-section" style="display:none;">
+        <div class="panel-card">
+            <h2 style="margin-top:0;">Request Leave</h2>
+            <form id="leave-form" onsubmit="submitLeave(event)" enctype="multipart/form-data">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                    <div class="form-group">
+                        <label>Leave Type</label>
+                        <select name="leave_type" id="leave_type" onchange="toggleMCField()" required>
+                            <option value="Annual">Annual Leave</option>
+                            <option value="Sick">Sick Leave (Requires MC)</option>
+                            <option value="Emergency">Emergency Leave</option>
+                            <option value="Unpaid">Unpaid Leave</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="mc-upload-group" style="display:none;">
+                        <label>Upload MC (Image/PDF)</label>
+                        <input type="file" name="attachment" id="mc_file">
+                    </div>
+                    <div class="form-group"><label>Start Date</label><input type="date" name="start_date" required></div>
+                    <div class="form-group"><label>End Date</label><input type="date" name="end_date" required></div>
+                </div>
+                <div class="form-group" style="margin-top:15px;"><label>Reason / Note</label><textarea name="reason" required placeholder="Provide a short explanation..." style="width:100%; padding:10px; background:#3d3d3d; color:white; border-radius:8px; border:none;"></textarea></div>
+                <button type="submit" class="btn-confirm" style="margin-top:20px;">Submit Request</button>
+            </form>
+        </div>
+
+        <div class="panel-card" style="margin-top:20px;">
+            <h3 style="margin-top:0;">My Leave History</h3>
+            <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                <thead>
+                    <tr style="background:#3d3d3d; text-align:left;">
+                        <th style="padding:12px;">Dates</th>
+                        <th style="padding:12px;">Type</th>
+                        <th style="padding:12px;">Reason</th>
+                        <th style="padding:12px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="leave-history-container">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- VIEW: ORDERS (History Table) -->
     <div id="view-orders" class="view-section" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -639,6 +689,10 @@ let currentFilter = 'All';
 let currentBranchFilter = <?php echo json_encode($branch_name); ?>;
 const currentBranchId = <?php echo json_encode($branch_id); ?>;
 
+let knownOrderIds = new Set();
+let isFirstLoad = true;
+const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+
 
 document.addEventListener('DOMContentLoaded', () => {
     loadOrders();
@@ -682,6 +736,19 @@ function loadOrders() {
     fetch('get_dashboard_data.php?branch_id=' + encodeURIComponent(currentBranchId))
         .then(response => response.json())
         .then(orders => {
+            let hasNewOrder = false;
+            orders.forEach(order => {
+                if (!knownOrderIds.has(order.id)) {
+                    if (!isFirstLoad) hasNewOrder = true;
+                    knownOrderIds.add(order.id);
+                }
+            });
+
+            if (hasNewOrder) {
+                notificationSound.play().catch(e => console.warn("Audio play blocked. Click anywhere on the dashboard once to enable sound notifications."));
+            }
+            isFirstLoad = false;
+
             allOrders = orders; // Store for other functions
             container.innerHTML = '';
             
@@ -787,6 +854,7 @@ function loadOrders() {
                         <div class="order-actions">
                             ${actionButton}
                             ${deleteButton}
+                            <button class="action-btn" style="background:#3498db;" onclick="printOrderToKPS(${order.id})"><i class="fas fa-print"></i> Print to KPS</button>
                         </div>
                     </div>
                 `;
@@ -1234,15 +1302,77 @@ function toggleEditShifts() {
 
 // === CLOCK IN/OUT LOGIC ===
 function handleClock(type) {
-    const history = JSON.parse(localStorage.getItem('bambam_clock_history')) || [];
-    const now = new Date();
-    const timeString = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+    const action = type === 'Clock In' ? 'clock_in' : 'clock_out';
+    const formData = new FormData();
+    formData.append('action', action);
+
+    fetch('process_attendance.php', { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            alert(type + " recorded! " + (data.work_hours ? "\nTotal Work: " + data.work_hours + " hrs (Break deducted)" : ""));
+            loadClockHistory();
+        } else {
+            alert("Error: " + data.message);
+        }
+    });
+}
+
+function toggleMCField() {
+    const type = document.getElementById('leave_type').value;
+    document.getElementById('mc-upload-group').style.display = (type === 'Sick') ? 'block' : 'none';
+}
+
+function submitLeave(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
     
-    // Store timestamp for accurate filtering
-    history.unshift({ type: type, time: timeString, timestamp: now.getTime() });
-    localStorage.setItem('bambam_clock_history', JSON.stringify(history));
-    loadClockHistory();
-    alert(`Successfully ${type} at ${timeString}`);
+    fetch('process_leave.php', { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            alert(data.message);
+            form.reset();
+            switchView('dashboard', document.querySelector('.nav-item'));
+        } else {
+            alert("Failed: " + data.message);
+        }
+    })
+    .catch(err => {
+        console.error('Fetch error:', err);
+        alert("A system error occurred. Please check if the 'uploads/leaves/' folder exists and your database is connected.");
+    });
+}
+
+function loadLeaveHistory() {
+    const container = document.getElementById('leave-history-container');
+    container.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Loading history...</td></tr>';
+
+    fetch('get_staff_leave.php')
+        .then(res => res.json())
+        .then(data => {
+            container.innerHTML = '';
+            if(data.length === 0) {
+                container.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#777;">No leave requests found.</td></tr>';
+                return;
+            }
+            data.forEach(leave => {
+                container.innerHTML += `
+                    <tr style="border-bottom:1px solid #444;">
+                        <td style="padding:12px;">
+                            <div style="font-weight:bold;">${leave.start_date}</div>
+                            <div style="font-size:11px; color:#aaa;">to ${leave.end_date}</div>
+                        </td>
+                        <td style="padding:12px;">${leave.leave_type}</td>
+                        <td style="padding:12px; font-size:13px;">${leave.reason}</td>
+                        <td style="padding:12px;">
+                            <span class="status-badge-leave leave-${leave.status}">${leave.status}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+        });
 }
 
 function loadClockHistory() {
@@ -1326,6 +1456,11 @@ function loadStaffList() {
             `;
         });
 }
+
+function printOrderToKPS(orderId) {
+    window.open(`print_kps_order.php?id=${orderId}`, '_blank');
+}
+
 // Listen for storage changes from other tabs (Instant Update)
 window.addEventListener('storage', loadOrders);
 window.addEventListener('online', updateOnlineStatus);

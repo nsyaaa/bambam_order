@@ -561,14 +561,15 @@ if (isset($_SESSION['user_id'])) {
             <label>Payment Method:</label>
             <select id="order-payment" onchange="togglePaymentInfo()">
                 <option value="Cash">Cash</option>
-                <option value="E-Wallet">E-Wallet</option>
-                <option value="Transfer">Transfer</option>
+                <option value="ToyyibPay">Online Payment (ToyyibPay)</option>
+                <option value="TnG">TnG</option>
             </select>
 
             <div id="payment-details" class="hidden">
-                <div style="background:#222; padding:10px; border-radius:5px; margin-bottom:10px; text-align:center;">
-                    <p style="color:#FFA500; margin:0;"><strong>Bank Transfer / QR</strong></p>
-                    <p style="font-size:0.8rem; margin:5px 0;">Maybank: 551234567890<br>Bambam Burger Sdn Bhd</p>
+                <div id="tng-qr-section" style="background:#222; padding:15px; border-radius:10px; margin-bottom:15px; text-align:center; border: 1px dashed #FFA500;">
+                    <p style="color:#FFA500; margin:0 0 10px 0; font-weight:bold;">Scan to Pay via TnG</p>
+                    <img src="images/tng_qr.png" alt="TnG QR Code" style="width:200px; height:200px; background:white; padding:10px; border-radius:10px; margin-bottom:10px;" onerror="this.src='https://via.placeholder.com/200?text=TnG+QR+Code'">
+                    <p style="font-size:0.8rem; color:#ccc; margin:0;">Bambam Burger Enterprise</p>
                 </div>
                 <label>Upload Receipt:</label>
                 <input type="file" id="payment-proof" accept="image/*">
@@ -723,6 +724,11 @@ function updateCartUI() {
                     <strong>${item.name}</strong><br>
                     ${proteinInput}
                     ${variantInput}
+                    ${item.customization ? `
+                        <div style="font-size:11px; color:#ffb74d; margin: 5px 0; line-height: 1.3; background: rgba(255,165,0,0.1); padding: 5px; border-radius: 4px; border-left: 2px solid #FFA500;">
+                            <strong>Build:</strong> ${item.customization}
+                        </div>
+                    ` : ''}
                     <input type="text" placeholder="Add note..." value="${item.note || ''}" onchange="updateCartItem(${index}, 'note', this.value)" style="width:100%; padding:5px; margin-top:5px; background:#333; color:white; border:1px solid #555; border-radius:4px; font-size:12px;">
                 </div>
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -778,7 +784,7 @@ function toggleCart() {
 function togglePaymentInfo() {
     const method = document.getElementById('order-payment').value;
     const details = document.getElementById('payment-details');
-    details.style.display = (method === 'Cash') ? 'none' : 'block';
+    details.style.display = (method === 'Cash' || method === 'ToyyibPay') ? 'none' : 'block';
 }
 
 function showCheckoutForm() {
@@ -846,20 +852,38 @@ function placeOrder() {
     if (name) formData.append('sender_name', name);
 
     const payment = document.getElementById('order-payment').value;
-    if(payment !== 'Cash') {
+    if(payment !== 'Cash' && payment !== 'ToyyibPay') {
         const file = document.getElementById('payment-proof').files[0];
         if(!file) return alert("Please upload receipt.");
         formData.append('payment_proof', file);
     }
 
+    // Disable button to prevent multiple clicks
+    const checkoutBtn = document.getElementById('btn-checkout-action');
+    checkoutBtn.disabled = true;
+    checkoutBtn.innerText = "Processing...";
+
     fetch('place_order.php', {
         method: 'POST',
         body: formData
     })
-    .then(res => res.json())
+    .then(async response => {
+        const text = await response.text();
+        try {
+            return JSON.parse(text);
+        } catch (err) {
+            console.error('Server Response:', text);
+            throw new Error("Server returned invalid data. Check console for details.");
+        }
+    })
     .then(data => {
         if(data.success) {
-            // Show Success Popup with Email Status
+            if (data.redirect_url) {
+                // Redirect to ToyyibPay
+                window.location.href = data.redirect_url;
+                return;
+            }
+
             let msg = "Order Placed Successfully! (#" + data.order_id + ")";
             if(data.email_status.includes("Failed") || data.email_status.includes("missing")) {
                 msg += "\n\n⚠️ Email Warning: " + data.email_status;
@@ -873,7 +897,15 @@ function placeOrder() {
             window.location.href = 'receipt.php?id=' + data.order_id;
         } else {
             alert("Order failed: " + data.message);
+            checkoutBtn.disabled = false;
+            checkoutBtn.innerText = "Place Order";
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("An unexpected error occurred. Please check your connection.");
+        checkoutBtn.disabled = false;
+        checkoutBtn.innerText = "Place Order";
     });
 }
 

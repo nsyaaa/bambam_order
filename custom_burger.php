@@ -272,7 +272,18 @@ function updatePrice() {
 }
 
 function addToCartCustom() {
-    if (layers.length < 2) { alert("Add more ingredients!"); return; }
+    // Check if the burger has at least one Bun or one Patty
+    const hasBase = layers.some(l => 
+        l.type.includes('bun') || 
+        l.type.includes('patty')
+    );
+
+    if (!hasBase) {
+        alert("Invalid Selection: A custom burger must include at least one Bun or a Patty. Ordering toppings alone (like cheese or vegetables) is not permitted.");
+        return;
+    }
+
+    if (layers.length < 1) { alert("Please add ingredients to your burger!"); return; }
 
     const description = layers.map(l => l.name).join(', '); // e.g. "Bottom Bun, Beef Patty, Cheese"
     const customItem = { id: 'custom-' + Date.now(), name: 'Custom Burger', price: totalPrice, qty: 1, variant: 'Custom Build', protein: '', customization: description };

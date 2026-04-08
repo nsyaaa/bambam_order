@@ -363,16 +363,15 @@
             <label style="display:block; margin-bottom:5px; color:#ccc;"><?php echo $t['payment']; ?>:</label>
             <select id="order-payment" onchange="togglePaymentInfo()" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; background:#333; color:white; border:1px solid #555;">
                 <option value="Cash">Cash</option>
-                <option value="E-Wallet">E-Wallet</option>
-                <option value="Transfer">Transfer</option>
+                <option value="TnG">TnG</option>
             </select>
 
             <!-- Payment Details Container -->
             <div id="payment-details" style="display:none; background:#222; padding:15px; border-radius:5px; margin-bottom:10px; border:1px dashed #555;">
-                <!-- E-Wallet Info -->
+                <!-- TnG Info -->
                 <div id="info-ewallet" style="display:none; text-align:center;">
-                    <p style="color:#FFA500; font-weight:bold; margin-top:0;">Scan to Pay</p>
-                    <div style="width:150px; height:150px; background:white; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; color:black;">QR CODE HERE</div>
+                    <p style="color:#FFA500; font-weight:bold; margin-top:0;">Scan to Pay via TnG</p>
+                    <img src="images/tng_qr.png" alt="TnG QR Code" style="width:180px; height:180px; background:white; padding:5px; border-radius:5px; margin-bottom:10px;" onerror="this.src='https://via.placeholder.com/180?text=TnG+QR+Code'">
                 </div>
                 
                 <!-- Transfer Info -->
@@ -457,7 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Re-implementing Cart Logic for this page
-let cart = [];
+let cart = JSON.parse(localStorage.getItem('bambam_cart')) || [];
 const isLoggedIn = <?php echo isset($_SESSION['user_id']) ? 'true' : 'false'; ?>;
 
 function addToCart(btn) {
@@ -475,15 +474,16 @@ function addToCart(btn) {
     const variantSelect = card.querySelector('.variant');
     const variant = variantSelect ? variantSelect.value : '';
     
-    let price = 0;
+    let price = 0.00;
     if(variantSelect && variantSelect.selectedOptions[0].dataset.price){
         price = parseFloat(variantSelect.selectedOptions[0].dataset.price);
     } else {
-        const priceMatch = card.querySelector('p').innerText.match(/[0-9.]+/);
+        const priceText = card.querySelector('.price').innerText;
+        const priceMatch = priceText.match(/[0-9.]+/);
         price = priceMatch ? parseFloat(priceMatch[0]) : 0;
     }
 
-    const qty = parseInt(card.querySelector('.qty').value);
+    const qty = parseInt(card.querySelector('.qty') ? card.querySelector('.qty').value : 1);
     const itemID = `${name}-${protein}-${variant}`;
 
     const existing = cart.find(i => i.id === itemID);
@@ -500,10 +500,25 @@ function updateCartUI() {
     let total = 0; let count = 0;
     cart.forEach((item,index)=>{
         total += (item.price*item.qty); count += item.qty;
-        list.innerHTML += `<div class="cart-item"><div><strong>${item.name}</strong><br><small>${item.protein} ${item.variant}</small></div><div class="cart-controls"><button onclick="changeQty(${index},-1)">-</button><span>${item.qty}</span><button onclick="changeQty(${index},1)">+</button><button onclick="removeItem(${index})" style="background:none;color:#ff4444;font-size:20px;">×</button></div></div>`;
+        const layersHtml = item.customization ? `<div style="font-size:11px; color:#ffb74d; margin-top:3px;">Build: ${item.customization}</div>` : '';
+        list.innerHTML += `
+            <div class="cart-item">
+                <div style="flex:1;">
+                    <strong>${item.name}</strong><br>
+                    <small>${item.protein} ${item.variant}</small>
+                    ${layersHtml}
+                </div>
+                <div class="cart-controls">
+                    <button onclick="changeQty(${index},-1)">-</button>
+                    <span>${item.qty}</span>
+                    <button onclick="changeQty(${index},1)">+</button>
+                    <button onclick="removeItem(${index})" style="background:none;color:#ff4444;font-size:20px;">×</button>
+                </div>
+            </div>`;
     });
     totalSpan.innerText = total.toFixed(2);
     countSpan.innerText = count;
+    localStorage.setItem('bambam_cart', JSON.stringify(cart));
 }
 function changeQty(index,amt){ cart[index].qty += amt; if(cart[index].qty<1) removeItem(index); else updateCartUI(); }
 function removeItem(index){ cart.splice(index,1); updateCartUI(); }
@@ -532,8 +547,8 @@ function togglePaymentInfo() {
         detailsDiv.style.display = 'none';
     } else {
         detailsDiv.style.display = 'block';
-        ewalletDiv.style.display = (method === 'E-Wallet') ? 'block' : 'none';
-        transferDiv.style.display = (method === 'Transfer') ? 'block' : 'none';
+        ewalletDiv.style.display = (method === 'TnG') ? 'block' : 'none';
+        transferDiv.style.display = 'none';
     }
 }
 
