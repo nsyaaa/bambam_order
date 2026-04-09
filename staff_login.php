@@ -1,5 +1,6 @@
 <?php
 session_start();
+include 'db.php';
 
 // Handle Logout
 if (isset($_GET['action']) && $_GET['action'] == 'logout') {
@@ -51,16 +52,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
 
-    if ($matchedBranch) {
+if ($matchedBranch) {
+    $stmt = $pdo->prepare("SELECT id, name FROM branches WHERE name = ? LIMIT 1");
+    $stmt->execute([$matchedBranch['name']]);
+    $dbBranch = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($dbBranch) {
         $_SESSION['staff_logged_in'] = true;
-        $_SESSION['branch_id'] = $matchedBranch['id'];
-        $_SESSION['branch_name'] = $matchedBranch['name'];
+        $_SESSION['branch_id'] = $dbBranch['id'];
+        $_SESSION['branch_name'] = $dbBranch['name'];
 
         header("Location: staff_dashboard.php");
         exit;
     } else {
-        $error = "Invalid Password!";
+        $error = "Branch not found in database!";
     }
+} else {
+    $error = "Invalid Password!";
+}
 }
 ?>
 

@@ -9,7 +9,7 @@ try {
     $globalStoreStatus = trim(strtolower($stmt->fetchColumn() ?: 'open'));
 
     if ($globalStoreStatus === 'open') {
-        $stmt = $pdo->query("SELECT name, phone FROM branches WHERE is_open = 1 ORDER BY name ASC");
+        $stmt = $pdo->query("SELECT name, phone, is_open FROM branches ORDER BY name ASC");
         $openBranches = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 } catch (Exception $e) {}
@@ -124,6 +124,23 @@ try {
         from { transform: scale(1) translateY(0); }
         to { transform: scale(1.2) translateY(-5px); }
     }
+
+    .closed {
+    background: #555 !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.closed:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.closed-label {
+    font-size: 12px;
+    color: red;
+    font-weight: bold;
+}
 </style>
 
 <img src="images/fries.png" class="bg-asset fries" alt="">
@@ -137,8 +154,10 @@ try {
     
     <div class="branch-grid">
         <?php foreach($openBranches as $branch): ?>
-            <div class="card" 
-                 onclick="selectBranch('<?php echo htmlspecialchars($branch['name']); ?>')">
+            <div class="card <?php echo !$branch['is_open'] ? 'closed' : ''; ?>" 
+     <?php if($branch['is_open']): ?>
+         onclick="selectBranch('<?php echo htmlspecialchars($branch['name']); ?>')"
+     <?php endif; ?>>
                 
                 <?php 
                     // Dynamic icons to match your pic
@@ -150,7 +169,12 @@ try {
                 ?>
 
                 <i class="fas <?php echo $icon; ?>"></i>
-                <p><?php echo htmlspecialchars($branch['name']); ?></p>
+               <p>
+    <?php echo htmlspecialchars($branch['name']); ?>
+    <?php if(!$branch['is_open']): ?>
+        <br><span class="closed-label">CLOSED</span>
+    <?php endif; ?>
+</p>
             </div>
         <?php endforeach; ?>
     </div>
