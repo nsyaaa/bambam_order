@@ -34,7 +34,7 @@ CREATE TABLE `activity_logs` (
   `action` varchar(50) DEFAULT NULL,
   `details` text,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `activity_logs`
@@ -103,7 +103,7 @@ CREATE TABLE `branches` (
   `name` varchar(255) NOT NULL,
   `phone` varchar(20) DEFAULT NULL,
   `is_open` tinyint(1) DEFAULT '1'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `branches`
@@ -127,7 +127,7 @@ CREATE TABLE `favorites` (
   `user_id` int NOT NULL,
   `product_id` int NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `favorites`
@@ -152,7 +152,7 @@ CREATE TABLE `inventory` (
   `unit` varchar(50) DEFAULT 'units',
   `status` varchar(50) DEFAULT 'In Stock',
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `inventory`
@@ -178,7 +178,7 @@ CREATE TABLE `leave_requests` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `mc_doc_path` varchar(255) DEFAULT NULL,
   `attachment` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `leave_requests`
@@ -210,7 +210,7 @@ CREATE TABLE `menu_items` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `is_available` tinyint(1) NOT NULL DEFAULT '1',
   `cost_price` decimal(10,2) DEFAULT '0.00'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `menu_items`
@@ -281,7 +281,7 @@ CREATE TABLE `orders` (
   `rating` int DEFAULT NULL,
   `review` text,
   `address` text
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `orders`
@@ -386,7 +386,7 @@ CREATE TABLE `order_items` (
   `price` decimal(10,2) NOT NULL,
   `qty` int NOT NULL,
   `customization` text
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `order_items`
@@ -512,7 +512,7 @@ CREATE TABLE `staff` (
   `role` enum('admin','cashier','kitchen') NOT NULL DEFAULT 'kitchen',
   `branch` varchar(100) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `staff`
@@ -536,7 +536,7 @@ CREATE TABLE `staff_attendance` (
   `clock_in` datetime NOT NULL,
   `clock_out` datetime DEFAULT NULL,
   `status` enum('On Time','Late','Early Departure') DEFAULT 'On Time'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -547,7 +547,7 @@ CREATE TABLE `staff_attendance` (
 CREATE TABLE `system_settings` (
   `setting_key` varchar(50) NOT NULL,
   `setting_value` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `system_settings`
@@ -574,7 +574,7 @@ CREATE TABLE `users` (
   `profile_pic` varchar(255) DEFAULT NULL,
   `role` varchar(20) DEFAULT 'user',
   `last_login` timestamp NULL DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
