@@ -182,37 +182,6 @@ INSERT INTO `inventory` (`id`, `item_name`, `quantity`, `unit`, `status`, `updat
 -- --------------------------------------------------------
 
 --
--- Table structure for table `leave_requests`
---
-
-CREATE TABLE `leave_requests` (
-  `id` int NOT NULL,
-  `staff_id` int NOT NULL,
-  `leave_type` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
-  `start_date` date NOT NULL,
-  `end_date` date NOT NULL,
-  `reason` text COLLATE utf8mb4_general_ci,
-  `status` enum('Pending','Approved','Rejected') COLLATE utf8mb4_general_ci DEFAULT 'Pending',
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `mc_doc_path` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `attachment` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `leave_requests`
---
-
-INSERT INTO `leave_requests` (`id`, `staff_id`, `leave_type`, `start_date`, `end_date`, `reason`, `status`, `created_at`, `mc_doc_path`, `attachment`) VALUES
-(1, 1, 'Emergency', '2026-04-08', '2026-04-09', 'urgent', 'Pending', '2026-04-08 09:06:43', NULL, NULL),
-(2, 1, 'Emergency', '2026-04-08', '2026-04-09', 'urgent', 'Pending', '2026-04-08 09:22:40', NULL, NULL),
-(3, 1, 'Emergency', '2026-04-08', '2026-04-09', 'urgent', 'Pending', '2026-04-08 09:37:52', NULL, NULL),
-(4, 1, 'Emergency', '2026-04-08', '2026-04-09', 'urgent', 'Pending', '2026-04-08 09:45:06', NULL, NULL),
-(5, 1, 'Emergency', '2026-04-08', '2026-04-09', 'urgent', 'Pending', '2026-04-08 09:56:32', NULL, NULL),
-(6, 1, 'Unpaid', '2026-04-08', '2026-04-09', 'urgent', 'Pending', '2026-04-08 10:26:33', NULL, NULL);
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `menu_items`
 --
 
@@ -644,12 +613,6 @@ ALTER TABLE `inventory`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `leave_requests`
---
-ALTER TABLE `leave_requests`
-  ADD PRIMARY KEY (`id`);
-
---
 -- Indexes for table `menu_items`
 --
 ALTER TABLE `menu_items`
@@ -727,12 +690,6 @@ ALTER TABLE `favorites`
 --
 ALTER TABLE `inventory`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
---
--- AUTO_INCREMENT for table `leave_requests`
---
-ALTER TABLE `leave_requests`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `menu_items`

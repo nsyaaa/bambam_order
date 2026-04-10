@@ -692,13 +692,37 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     /* SIDEBAR */
     .sidebar {
         width: 260px;
-        background: #1e1e1e; /* Dark Grey */
-        border-right: none; 
+        background: #1a1a1a; /* Dark Grey */
+        border-right: 1px solid #333;
         display: flex;
         flex-direction: column;
         padding: 20px;
         flex-shrink: 0;
+        position: fixed;         /* Keeps it on the left while page scrolls */
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1000;
+        overflow-y: auto;        /* THIS ENABLES THE SCROLLBAR */
+        overflow-x: hidden;
+        padding-bottom: 20px;    /* Space at the bottom so Logout isn't cramped */
     }
+
+    /* Sidebar Scrollbar Styling */
+    .sidebar::-webkit-scrollbar {
+        width: 5px; /* Thinner scrollbar for sidebar */
+    }
+    .sidebar::-webkit-scrollbar-track {
+        background: #1a1a1a;
+    }
+    .sidebar::-webkit-scrollbar-thumb {
+        background: #333;
+        border-radius: 10px;
+    }
+    .sidebar::-webkit-scrollbar-thumb:hover {
+        background: #ff5100;
+    }
+
     .logo {
         font-size: 24px;
         font-weight: 800;
@@ -751,14 +775,32 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         flex-direction: column;
         height: 100vh;
         overflow: hidden;
+        margin-left: 260px; /* Offset for the fixed sidebar */
     }
 
     /* MAIN CONTENT (Scrollable Area) */
     .main-content {
         flex: 1;
         padding: 30px; 
-        overflow-y: scroll;
+        overflow-y: auto; /* Change from 'scroll' to 'auto' for better behavior */
         background: #121212; /* Black */
+        scroll-behavior: smooth;
+        height: 100%; /* Ensure it takes full height */
+    }
+
+    /* Custom Scrollbar for modern look and feel */
+    .main-content::-webkit-scrollbar {
+        width: 8px;
+    }
+    .main-content::-webkit-scrollbar-track {
+        background: #1e1e1e;
+    }
+    .main-content::-webkit-scrollbar-thumb {
+        background: #333;
+        border-radius: 10px;
+    }
+    .main-content::-webkit-scrollbar-thumb:hover {
+        background: #ff5100; /* Matching your orange theme */
     }
 
     /* HEADER */
@@ -1252,14 +1294,12 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <i class="fas fa-receipt"></i> Orders 
         <?php if($pendingOrdersCount > 0): ?><span class="badge"><?php echo $pendingOrdersCount; ?></span><?php endif; ?>
     </div>
-    <div class="nav-item" data-view="leave-mgmt" onclick="switchView('leave-mgmt', this); loadAllLeaves();"><i class="fas fa-calendar-check"></i> Leave Mgmt</div>
     <?php if($canManageStaff): ?><div class="nav-item" data-view="staff" onclick="switchView('staff', this)"><i class="fas fa-users"></i> Staff</div><?php endif; ?>
     <div class="nav-item" data-view="reviews" onclick="switchView('reviews', this)"><i class="fas fa-star"></i> Reviews</div>
     <div class="nav-item" data-view="menu" onclick="switchView('menu', this)"><i class="fas fa-utensils"></i> Menu</div>
     <?php if($canViewReports): ?><div class="nav-item" data-view="inventory" onclick="switchView('inventory', this)"><i class="fas fa-boxes"></i> Inventory</div><?php endif; ?>
     <?php if($canViewReports): ?><div class="nav-item" data-view="reports" onclick="switchView('reports', this)"><i class="fas fa-chart-line"></i> Reports</div><?php endif; ?>
     <div class="nav-item" data-view="branches" onclick="switchView('branches', this)"><i class="fas fa-store"></i> Branches</div>
-    <?php if($isSuperAdmin): ?><div class="nav-item" data-view="logs" onclick="switchView('logs', this)"><i class="fas fa-history"></i> Activity Logs</div><?php endif; ?>
     <div class="nav-item" data-view="settings" onclick="switchView('settings', this)"><i class="fas fa-cog"></i> Settings</div>
     <div style="margin-top: auto;">
         <a href="?logout=1" class="nav-item">
@@ -1696,27 +1736,6 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </tbody>
                 </table>
             <?php endif; ?>
-        </div>
-    </div>
-
-    <!-- VIEW: LEAVE MANAGEMENT -->
-    <div id="view-leave-mgmt" class="view-section">
-        <div class="panel-card">
-            <h3 style="margin:0 0 20px 0; color: #ffffff;">📋 Staff Leave Requests</h3>
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Staff / Branch</th>
-                        <th>Type</th>
-                        <th>Dates</th>
-                        <th>Reason / Attachment</th>
-                        <th class="text-right">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="all-leaves-container">
-                    <!-- Populated by JS -->
-                </tbody>
-            </table>
         </div>
     </div>
 
@@ -2266,26 +2285,14 @@ function switchView(viewId, navItem) {
     // Hide all views
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
     // Show selected view
-    document.getElementById('view-' + viewId).classList.add('active');
+    const targetView = document.getElementById('view-' + viewId);
+    if (targetView) {
+        targetView.classList.add('active');
+    }
     
     // Update Sidebar Active State
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     navItem.classList.add('active');
-}
-
-function updateLeave(id, status) {
-    if(!confirm("Are you sure you want to " + status + " this request?")) return;
-    
-    const formData = new FormData();
-    formData.append('id', id);
-    formData.append('status', status);
-
-    fetch('update_leave_status.php', { method: 'POST', body: formData })
-    .then(res => res.json())
-    .then(data => {
-        if(data.success) { location.reload(); }
-        else { alert("Error: " + data.message); }
-    });
 }
 
 function previewImage(input, previewId) {

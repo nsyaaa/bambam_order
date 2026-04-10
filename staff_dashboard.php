@@ -358,7 +358,6 @@ try {
     <a href="#" class="nav-item active" onclick="switchView('dashboard', this)"><i class="fas fa-th-large"></i> Dashboard</a>
     <a href="#" class="nav-item" onclick="switchView('orders', this); loadOrderHistory();"><i class="fas fa-receipt"></i> Orders</a>
     <a href="#" class="nav-item" onclick="switchView('stock', this); loadStock();"><i class="fas fa-box-open"></i> Stock</a>
-    <a href="#" class="nav-item" onclick="switchView('staff', this); loadStaffList();"><i class="fas fa-users"></i> Staff</a>
 </div>
 
 <div class="main-content">
@@ -506,35 +505,6 @@ try {
         </div>
     </div>
 
-    <div id="view-staff" class="view-section" style="display:none;">
-        <h2 style="margin:0; margin-bottom:20px;">Staff Management</h2>
-        <div class="panel-card" style="padding:0; overflow:hidden;">
-            <table class="staff-table">
-                <thead>
-    <tr style="background:#3d3d3d;">
-        <th>Name</th>
-        <th>Role</th>
-        <th>Status</th>
-        <th style="text-align:right;">Attendance</th>
-    </tr>
-</thead>
-                <tbody id="staff-list-container"></tbody>
-            </table>
-        </div>
-
-        <div class="panel-card" style="margin-top:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h3 style="margin:0;">Attendance History</h3>
-                <div id="attendance-history-title" style="color:#aaa;">Select a staff</div>
-            </div>
-
-            <input type="date" id="staff-attendance-date-filter" onchange="reloadSelectedStaffAttendance()" style="padding:8px; border:1px solid #ccc; border-radius:5px; margin-bottom:15px;">
-
-            <div id="staff-attendance-history-list">
-                <div style="color:#777; font-size:13px;">Attendance history will appear here.</div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <div id="receiptModal" class="modal">
@@ -1202,5 +1172,3 @@ setInterval(loadOrders, 5000);
 </script>
 </body>
 </html>
-
-
