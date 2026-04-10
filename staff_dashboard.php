@@ -358,6 +358,8 @@ try {
     <a href="#" class="nav-item active" onclick="switchView('dashboard', this)"><i class="fas fa-th-large"></i> Dashboard</a>
     <a href="#" class="nav-item" onclick="switchView('orders', this); loadOrderHistory();"><i class="fas fa-receipt"></i> Orders</a>
     <a href="#" class="nav-item" onclick="switchView('stock', this); loadStock();"><i class="fas fa-box-open"></i> Stock</a>
+    <a href="#" class="nav-item" onclick="switchView('staff', this); loadStaffList();"><i class="fas fa-users"></i> Staff</a>
+
 </div>
 
 <div class="main-content">

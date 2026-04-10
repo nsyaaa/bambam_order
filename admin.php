@@ -710,17 +710,17 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     /* Sidebar Scrollbar Styling */
     .sidebar::-webkit-scrollbar {
-        width: 5px; /* Thinner scrollbar for sidebar */
+        width: 10px;
     }
     .sidebar::-webkit-scrollbar-track {
-        background: #1a1a1a;
+        background: #f1f1f1;
     }
     .sidebar::-webkit-scrollbar-thumb {
-        background: #333;
+        background: #888;
         border-radius: 10px;
     }
     .sidebar::-webkit-scrollbar-thumb:hover {
-        background: #ff5100;
+        background: #555;
     }
 
     .logo {
@@ -790,17 +790,17 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     /* Custom Scrollbar for modern look and feel */
     .main-content::-webkit-scrollbar {
-        width: 8px;
+        width: 10px;
     }
     .main-content::-webkit-scrollbar-track {
-        background: #1e1e1e;
+        background: #f1f1f1;
     }
     .main-content::-webkit-scrollbar-thumb {
-        background: #333;
+        background: #888;
         border-radius: 10px;
     }
     .main-content::-webkit-scrollbar-thumb:hover {
-        background: #ff5100; /* Matching your orange theme */
+        background: #555;
     }
 
     /* HEADER */

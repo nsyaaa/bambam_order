@@ -63,12 +63,18 @@ if (!isset($_SESSION['admin_id'])) {
 
         /* This makes the scrollbar visible even if your system hides them */
         .sidebar::-webkit-scrollbar {
-            width: 8px !important;
+            width: 10px !important;
             display: block !important;
         }
+        .sidebar::-webkit-scrollbar-track {
+            background: #f1f1f1 !important;
+        }
         .sidebar::-webkit-scrollbar-thumb {
-            background: #ff5722 !important; /* Matches your orange theme */
+            background: #888 !important;
             border-radius: 10px;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: #555 !important;
         }
     </style>
 
