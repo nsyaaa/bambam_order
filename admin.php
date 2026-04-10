@@ -1,4 +1,8 @@
 <?php
+$current_page = basename($_SERVER['PHP_SELF'], '.php');
+$page_title = ($current_page == 'admin') ? 'Dashboard' : ucwords(str_replace(['_', '-'], ' ', $current_page));
+?>
+<?php
 // ===============================
 // Bambam Burger - Admin Dashboard
 // ===============================
@@ -1313,14 +1317,7 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <!-- TOP HEADER -->
     <header class="top-header">
         <div class="header-title-section">
-            <h2 style="margin:0; font-weight: 400; color: #ffffff;">Dashboard</h2>
-            <div class="breadcrumbs">
-                <a href="#">Home</a> / <span>Dashboard</span>
-            </div>
-        </div>
-        <div class="header-search">
-            <i class="fas fa-search"></i>
-            <input type="text" placeholder="Search transactions, items, etc..." onkeyup="filterGlobal(this.value)">
+            <h2 style="margin:0; font-weight: 400; color: #ffffff;"><?php echo $page_title; ?></h2>
         </div>
         <div class="header-actions">
             <button class="icon-btn"><i class="fas fa-bell"></i><span class="notification-dot"></span></button>
@@ -2281,7 +2278,26 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <script>
-function switchView(viewId, navItem) {
+function switchView(viewId, element) {
+    // 1. Define title mapping for a professional look
+    const titles = {
+        'dashboard': 'Dashboard',
+        'orders': 'Orders',
+        'staff': 'Staff Management',
+        'reviews': 'Customer Reviews',
+        'menu': 'Menu Management',
+        'inventory': 'Inventory',
+        'reports': 'Sales Reports',
+        'branches': 'Our Branches',
+        'settings': 'System Settings'
+    };
+
+    // 2. Update Header Title immediately
+    const headerTitle = document.querySelector('.top-header h2');
+    if (headerTitle && titles[viewId]) {
+        headerTitle.innerText = titles[viewId];
+    }
+
     // Hide all views
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
     // Show selected view
@@ -2289,10 +2305,10 @@ function switchView(viewId, navItem) {
     if (targetView) {
         targetView.classList.add('active');
     }
-    
+
     // Update Sidebar Active State
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    navItem.classList.add('active');
+    if (element) element.classList.add('active');
 }
 
 function previewImage(input, previewId) {
