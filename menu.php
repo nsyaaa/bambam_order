@@ -407,13 +407,15 @@ if (isset($_SESSION['user_id'])) {
     </section>
 
     <!-- Level 2: Categories (Hidden initially) -->
-    <section class="menu-landing" id="category-choice" style="display:none;">
-        <div class="menu-box" data-category="burger"><h3>Burger</h3></div>
-        <div class="menu-box" data-category="special"><h3>Special</h3></div>
-        <div class="menu-box" data-category="minuman"><h3>Minuman</h3></div>
-        <div class="menu-box" data-category="addon"><h3>Add-On</h3></div>
-        <div class="menu-box" onclick="showMainChoice()" style="background:#333; border-color:#555;"><h3>⬅ Back</h3></div>
-    </section>
+    <div id="category-choice" style="display:none; max-width: 800px; margin: 0 auto 40px;">
+        <button onclick="showMainChoice()" class="branch-action-btn" style="margin-bottom: 20px;">⬅ Back to Menu Type</button>
+        <section class="menu-landing" style="margin-bottom: 0;">
+            <div class="menu-box" data-category="burger"><h3>Burger</h3></div>
+            <div class="menu-box" data-category="special"><h3>Special</h3></div>
+            <div class="menu-box" data-category="minuman"><h3>Minuman</h3></div>
+            <div class="menu-box" data-category="addon"><h3>Add-On</h3></div>
+        </section>
+    </div>
 
     <section class="menu-grid" id="menuGrid">
     <?php
@@ -592,7 +594,7 @@ let cart = JSON.parse(localStorage.getItem('bambam_cart')) || [];
 
 function showCategories() {
     document.getElementById('main-choice').style.display = 'none';
-    document.getElementById('category-choice').style.display = 'grid';
+    document.getElementById('category-choice').style.display = 'block';
 }
 
 function showMainChoice() {
