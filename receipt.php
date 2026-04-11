@@ -1,17 +1,17 @@
-<?php 
+<?php
 include_once 'db.php';
 
 // Handle Order Completion (Customer/Staff Tap)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_received'], $_POST['order_id'])) {
     $stmt = $pdo->prepare("UPDATE orders SET status = 'Completed' WHERE id = ?");
     $stmt->execute([$_POST['order_id']]);
-    
+
     // Return JSON for AJAX calls
     if (isset($_POST['ajax'])) {
         echo json_encode(['success' => true]);
         exit;
     }
-    
+
     header("Location: receipt.php?id=" . $_POST['order_id']);
     exit;
 }
@@ -19,8 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_received'], $
 // Handle Rating Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_rating'], $_POST['order_id'])) {
     // Auto-create columns if they don't exist
-    try { $pdo->query("SELECT review_image FROM orders LIMIT 1"); } 
-    catch (Exception $e) { 
+    try {
+        $pdo->query("SELECT review_image FROM orders LIMIT 1");
+    } catch (Exception $e) {
         // Add columns for advanced reviews if missing
         $pdo->exec("ALTER TABLE orders 
             ADD COLUMN rating INT DEFAULT NULL, 
@@ -28,14 +29,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_rating'], $_PO
             ADD COLUMN review_image VARCHAR(255) DEFAULT NULL,
             ADD COLUMN reaction VARCHAR(50) DEFAULT NULL,
             ADD COLUMN admin_reply TEXT DEFAULT NULL
-        "); 
+        ");
     }
 
     // Handle Image Upload
     $imagePath = null;
     if (!empty($_FILES['review_image']['name'])) {
         $targetDir = "uploads/reviews/";
-        if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+        if (!is_dir($targetDir))
+            mkdir($targetDir, 0777, true);
         $fileName = time() . "_" . basename($_FILES['review_image']['name']);
         if (move_uploaded_file($_FILES['review_image']['tmp_name'], $targetDir . $fileName)) {
             $imagePath = $fileName;
@@ -67,7 +69,7 @@ if ($order_id) {
         $raw_status = strtolower($order['status']);
         $isDelivery = isset($order['order_type']) && strtolower($order['order_type']) === 'delivery';
         $isPaid = isset($order['payment_status']) && $order['payment_status'] === 'Paid';
-        
+
         // Fetch Order Items
         $stmtItems = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
         $stmtItems->execute([$order_id]);
@@ -82,17 +84,17 @@ if ($order_id) {
 // 2. CONFIGURATION: Map DB Status to Design
 // Fix: Map various DB statuses to the 4 visual stages
 $status_map = [
-    'pending'   => 'placed',
-    'placed'    => 'placed',
+    'pending' => 'placed',
+    'placed' => 'placed',
     'confirmed' => 'placed',
     'preparing' => 'preparing',
-    'cooking'   => 'preparing',
-    'ready'     => 'delivery', 
-    'pickup'    => 'delivery',
-    'delivery'  => 'delivery',
-    'shipped'   => 'delivery',
+    'cooking' => 'preparing',
+    'ready' => 'delivery',
+    'pickup' => 'delivery',
+    'delivery' => 'delivery',
+    'shipped' => 'delivery',
     'completed' => 'delivered',
-    'served'    => 'delivered',
+    'served' => 'delivered',
     'delivered' => 'delivered'
 ];
 
@@ -101,30 +103,30 @@ $status = $status_map[$raw_status] ?? 'placed';
 $stages = [
     'placed' => [
         'percent' => '25%',
-        'title'   => 'ORDER PLACED',
-        'desc'    => 'We have received your order. Hang tight!',
-        'image'   => 'images/order_placed.png', 
-        'fallback' => '📋' 
+        'title' => 'ORDER PLACED',
+        'desc' => 'We have received your order. Hang tight!',
+        'image' => 'images/order_placed.png',
+        'fallback' => '📋'
     ],
     'preparing' => [
         'percent' => '50%',
-        'title'   => 'IN PROGRESS...',
-        'desc'    => 'Your Bambam Burger is being expertly prepared.',
-        'image'   => 'images/t1.png', 
+        'title' => 'IN PROGRESS...',
+        'desc' => 'Your Bambam Burger is being expertly prepared.',
+        'image' => 'images/t1.png',
         'fallback' => '🔥'
     ],
     'delivery' => [
         'percent' => '75%',
-        'title'   => $isDelivery ? 'ON THE WAY!' : 'READY FOR PICKUP',
-        'desc'    => $isDelivery ? 'Our rider is speeding to your location.' : 'Your order is ready at the counter.',
-        'image'   => $isDelivery ? 'images/delivery_scooter.png' : 'images/t1.png',
+        'title' => $isDelivery ? 'ON THE WAY!' : 'READY FOR PICKUP',
+        'desc' => $isDelivery ? 'Our rider is speeding to your location.' : 'Your order is ready at the counter.',
+        'image' => $isDelivery ? 'images/delivery_scooter.png' : 'images/t1.png',
         'fallback' => $isDelivery ? '🛵' : '🛍️'
     ],
     'delivered' => [
         'percent' => '100%',
-        'title'   => $isDelivery ? 'ENJOY!' : 'ORDER COLLECTED',
-        'desc'    => $isDelivery ? 'Your delicious order has arrived. Makan time!' : 'Thank you for your order!',
-        'image'   => 'images/t1.png', 
+        'title' => $isDelivery ? 'ENJOY!' : 'ORDER COLLECTED',
+        'desc' => $isDelivery ? 'Your delicious order has arrived. Makan time!' : 'Thank you for your order!',
+        'image' => 'images/t1.png',
         'fallback' => '✅'
     ]
 ];
@@ -156,8 +158,8 @@ $current = $stages[$status] ?? $stages['placed'];
         padding: 40px 30px;
         border-radius: 40px;
         text-align: center;
-        box-shadow: 0 40px 100px rgba(0,0,0,0.8);
-        border: 1px solid rgba(255,255,255,0.05);
+        box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.05);
         position: relative;
     }
 
@@ -170,7 +172,8 @@ $current = $stages[$status] ?? $stages['placed'];
     }
 
     .dot {
-        width: 14px; height: 14px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%;
         background: #333;
         position: relative;
@@ -194,7 +197,9 @@ $current = $stages[$status] ?? $stages['placed'];
     .progress-fill {
         height: 100%;
         background: linear-gradient(90deg, #ff5100, #ff8c00);
-        width: <?php echo $current['percent']; ?>;
+        width:
+            <?php echo $current['percent']; ?>
+        ;
         transition: width 1.5s ease-in-out;
     }
 
@@ -211,21 +216,29 @@ $current = $stages[$status] ?? $stages['placed'];
     .main-status-img {
         width: 100%;
         max-width: 220px;
-        filter: drop-shadow(0 20px 30px rgba(0,0,0,0.6));
+        filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.6));
         z-index: 5;
     }
 
     /* ANIMATIONS BASED ON PHP STATUS */
-    .main-status-img.anim-preparing, .status-fallback.anim-preparing { animation: sizzle 0.3s infinite alternate; }
+    .main-status-img.anim-preparing,
+    .status-fallback.anim-preparing {
+        animation: sizzle 0.3s infinite alternate;
+    }
+
     .illustration-stage.glow-effect::before {
         content: '';
         position: absolute;
-        width: 150px; height: 150px;
-        background: radial-gradient(circle, rgba(255,81,0,0.3) 0%, transparent 70%);
+        width: 150px;
+        height: 150px;
+        background: radial-gradient(circle, rgba(255, 81, 0, 0.3) 0%, transparent 70%);
         animation: glow 2s infinite;
     }
 
-    .main-status-img.anim-delivery, .status-fallback.anim-delivery { animation: bounce 0.4s infinite; }
+    .main-status-img.anim-delivery,
+    .status-fallback.anim-delivery {
+        animation: bounce 0.4s infinite;
+    }
 
     /* TEXT ELEMENTS */
     .status-title {
@@ -246,16 +259,39 @@ $current = $stages[$status] ?? $stages['placed'];
 
     /* REUSABLE KEYFRAMES */
     @keyframes sizzle {
-        from { transform: translateY(0); }
-        to { transform: translateY(-4px); }
+        from {
+            transform: translateY(0);
+        }
+
+        to {
+            transform: translateY(-4px);
+        }
     }
+
     @keyframes glow {
-        0%, 100% { opacity: 0.5; transform: scale(1); }
-        50% { opacity: 1; transform: scale(1.2); }
+
+        0%,
+        100% {
+            opacity: 0.5;
+            transform: scale(1);
+        }
+
+        50% {
+            opacity: 1;
+            transform: scale(1.2);
+        }
     }
+
     @keyframes bounce {
-        0%, 100% { transform: translateY(0) rotate(0); }
-        50% { transform: translateY(-5px) rotate(1deg); }
+
+        0%,
+        100% {
+            transform: translateY(0) rotate(0);
+        }
+
+        50% {
+            transform: translateY(-5px) rotate(1deg);
+        }
     }
 
     .order-meta {
@@ -272,7 +308,7 @@ $current = $stages[$status] ?? $stages['placed'];
         padding: 30px;
         border-radius: 15px;
         margin-top: 30px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         font-family: 'Courier New', Courier, monospace;
         text-align: left;
         position: relative;
@@ -285,6 +321,7 @@ $current = $stages[$status] ?? $stages['placed'];
         padding-bottom: 15px;
         margin-bottom: 15px;
     }
+
     .receipt-logo {
         font-family: 'Fraunces', serif;
         font-weight: 800;
@@ -292,12 +329,13 @@ $current = $stages[$status] ?? $stages['placed'];
         color: #ff5100;
         margin-bottom: 5px;
     }
+
     .receipt-info {
         font-size: 12px;
         color: #666;
         line-height: 1.4;
     }
-    
+
     .receipt-meta-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -307,8 +345,17 @@ $current = $stages[$status] ?? $stages['placed'];
         border-bottom: 2px dashed #ccc;
         padding-bottom: 15px;
     }
-    .meta-label { font-weight: bold; color: #888; }
-    .meta-val { font-weight: bold; color: #000; text-align: right; }
+
+    .meta-label {
+        font-weight: bold;
+        color: #888;
+    }
+
+    .meta-val {
+        font-weight: bold;
+        color: #000;
+        text-align: right;
+    }
 
     .receipt-items-table {
         width: 100%;
@@ -316,37 +363,85 @@ $current = $stages[$status] ?? $stages['placed'];
         border-collapse: collapse;
         margin-bottom: 15px;
     }
-    .receipt-items-table th { text-align: left; color: #888; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-    .receipt-items-table td { padding: 8px 0; vertical-align: top; }
-    .receipt-items-table .item-price { text-align: right; }
-    
+
+    .receipt-items-table th {
+        text-align: left;
+        color: #888;
+        font-size: 10px;
+        text-transform: uppercase;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+    }
+
+    .receipt-items-table td {
+        padding: 8px 0;
+        vertical-align: top;
+    }
+
+    .receipt-items-table .item-price {
+        text-align: right;
+    }
+
     .receipt-total-section {
         border-top: 2px dashed #ccc;
         padding-top: 15px;
     }
+
     .total-row {
         display: flex;
         justify-content: space-between;
         margin-bottom: 5px;
         font-size: 14px;
     }
+
     .grand-total {
         font-size: 18px;
         font-weight: bold;
         color: #ff5100;
         margin-top: 10px;
     }
-    
+
     .print-btn {
-        display: block; width: 100%; background: #333; color: white; border: none; padding: 12px; border-radius: 8px; margin-top: 20px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.3s;
+        display: block;
+        width: 100%;
+        background: #333;
+        color: white;
+        border: none;
+        padding: 12px;
+        border-radius: 8px;
+        margin-top: 20px;
+        cursor: pointer;
+        font-weight: bold;
+        text-transform: uppercase;
+        transition: 0.3s;
     }
-    .print-btn:hover { background: #ff5100; }
+
+    .print-btn:hover {
+        background: #ff5100;
+    }
 
     @media print {
-        body * { visibility: hidden; }
-        .receipt-card, .receipt-card * { visibility: visible; }
-        .receipt-card { position: absolute; left: 0; top: 0; width: 100%; margin: 0; box-shadow: none; }
-        .print-btn { display: none; }
+        body * {
+            visibility: hidden;
+        }
+
+        .receipt-card,
+        .receipt-card * {
+            visibility: visible;
+        }
+
+        .receipt-card {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            box-shadow: none;
+        }
+
+        .print-btn {
+            display: none;
+        }
     }
 
     /* CONFIRM BUTTON */
@@ -367,11 +462,13 @@ $current = $stages[$status] ?? $stages['placed'];
         text-transform: uppercase;
         letter-spacing: 1px;
     }
+
     .btn-confirm:hover {
         transform: translateY(-3px);
         box-shadow: 0 15px 25px rgba(46, 204, 113, 0.6);
         background: #27ae60;
     }
+
     .btn-confirm:active {
         transform: translateY(1px);
     }
@@ -384,48 +481,129 @@ $current = $stages[$status] ?? $stages['placed'];
         border-radius: 15px;
         margin-top: 20px;
         text-align: center;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        display: none; /* Hidden by default, toggled by JS/PHP */
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        display: none;
+        /* Hidden by default, toggled by JS/PHP */
     }
+
     .rating-stars {
         display: flex;
         justify-content: center;
         gap: 10px;
         margin: 15px 0;
     }
+
     .star {
         font-size: 30px;
         color: #ddd;
         cursor: pointer;
         transition: color 0.2s;
     }
-    .star.selected, .star:hover { color: #ffcc00; }
-    .rating-textarea {
-        width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 15px; font-family: inherit;
+
+    .star.selected,
+    .star:hover {
+        color: #ffcc00;
     }
-    .btn-submit-rating { background: #ff5100; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
-    
+
+    .rating-textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        font-family: inherit;
+    }
+
+    .btn-submit-rating {
+        background: #ff5100;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+    }
+
     /* REACTIONS & UPLOAD */
-    .reaction-group { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; }
-    .reaction-opt { cursor: pointer; opacity: 0.5; transition: 0.3s; text-align: center; }
-    .reaction-opt:hover, .reaction-opt.active { opacity: 1; transform: scale(1.1); }
-    .reaction-opt span { display: block; font-size: 24px; }
-    .reaction-opt small { font-size: 10px; color: #666; }
-    .file-upload-wrapper { margin-bottom: 15px; text-align: left; }
-    .file-upload-wrapper input { display: none; }
-    .file-upload-label { display: block; padding: 10px; border: 1px dashed #ccc; border-radius: 8px; text-align: center; cursor: pointer; color: #666; font-size: 0.9rem; }
-    .file-upload-label:hover { border-color: #ff5100; color: #ff5100; }
-    .preview-thumb { width: 100%; height: 100px; object-fit: cover; border-radius: 8px; margin-top: 10px; display: none; }
+    .reaction-group {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .reaction-opt {
+        cursor: pointer;
+        opacity: 0.5;
+        transition: 0.3s;
+        text-align: center;
+    }
+
+    .reaction-opt:hover,
+    .reaction-opt.active {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    .reaction-opt span {
+        display: block;
+        font-size: 24px;
+    }
+
+    .reaction-opt small {
+        font-size: 10px;
+        color: #666;
+    }
+
+    .file-upload-wrapper {
+        margin-bottom: 15px;
+        text-align: left;
+    }
+
+    .file-upload-wrapper input {
+        display: none;
+    }
+
+    .file-upload-label {
+        display: block;
+        padding: 10px;
+        border: 1px dashed #ccc;
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .file-upload-label:hover {
+        border-color: #ff5100;
+        color: #ff5100;
+    }
+
+    .preview-thumb {
+        width: 100%;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-top: 10px;
+        display: none;
+    }
 </style>
 
 <div class="tracker-wrapper">
     <div class="bambam-tracker">
         <p style="font-size: 0.7rem; letter-spacing: 2px; opacity: 0.5; margin-bottom: 5px;">TRACKING ORDER</p>
-        <p style="font-weight: bold; margin-bottom: 25px;">#BAM-<?php echo str_pad($order_id, 5, '0', STR_PAD_LEFT); ?></p>
+        <p style="font-weight: bold; margin-bottom: 25px;">#BAM-<?php echo str_pad($order_id, 5, '0', STR_PAD_LEFT); ?>
+        </p>
 
         <div class="status-header">
-            <div class="dot <?php echo ($status == 'placed' || $status == 'preparing' || $status == 'delivery' || $status == 'delivered') ? 'active' : ''; ?>"></div>
-            <div class="dot <?php echo ($status == 'preparing' || $status == 'delivery' || $status == 'delivered') ? 'active' : ''; ?>"></div>
+            <div
+                class="dot <?php echo ($status == 'placed' || $status == 'preparing' || $status == 'delivery' || $status == 'delivered') ? 'active' : ''; ?>">
+            </div>
+            <div
+                class="dot <?php echo ($status == 'preparing' || $status == 'delivery' || $status == 'delivered') ? 'active' : ''; ?>">
+            </div>
             <div class="dot <?php echo ($status == 'delivery' || $status == 'delivered') ? 'active' : ''; ?>"></div>
             <div class="dot <?php echo ($status == 'delivered') ? 'active' : ''; ?>"></div>
         </div>
@@ -435,12 +613,12 @@ $current = $stages[$status] ?? $stages['placed'];
         </div>
 
         <div class="illustration-stage <?php echo ($status == 'preparing') ? 'glow-effect' : ''; ?>">
-            <img src="<?php echo $current['image']; ?>" 
-                 class="main-status-img <?php echo ($status == 'preparing') ? 'anim-preparing' : (($status == 'delivery') ? 'anim-delivery' : ''); ?>" 
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/>
-            
-            <div class="status-fallback <?php echo ($status == 'preparing') ? 'anim-preparing' : (($status == 'delivery') ? 'anim-delivery' : ''); ?>" 
-                 style="display:none; font-size: 100px;"><?php echo $current['fallback']; ?></div>
+            <img src="<?php echo $current['image']; ?>"
+                class="main-status-img <?php echo ($status == 'preparing') ? 'anim-preparing' : (($status == 'delivery') ? 'anim-delivery' : ''); ?>"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+
+            <div class="status-fallback <?php echo ($status == 'preparing') ? 'anim-preparing' : (($status == 'delivery') ? 'anim-delivery' : ''); ?>"
+                style="display:none; font-size: 100px;"><?php echo $current['fallback']; ?></div>
         </div>
 
         <h2 class="status-title"><?php echo $current['title']; ?></h2>
@@ -448,101 +626,149 @@ $current = $stages[$status] ?? $stages['placed'];
 
         <!-- RECEIPT SECTION -->
         <?php if (!empty($order_items)): ?>
-        <div class="receipt-card">
-            <!-- 1. SHOP INFO -->
-            <div class="receipt-header-section">
-                <div class="receipt-logo"><?php echo $isPaid ? 'Official Receipt' : 'Order Confirmation'; ?> 🍔</div>
-                <div class="receipt-info">
-                    <?php echo htmlspecialchars($order['branch'] ?? 'Main Branch'); ?>, Perlis<br>
-                    Tel: +60 17-590 0799<br>
-                    www.bambamburger.com
+            <div class="receipt-card">
+                <!-- 1. SHOP INFO -->
+                <div class="receipt-header-section">
+                    <div class="receipt-logo"><?php echo $isPaid ? 'Official Receipt' : 'Order Confirmation'; ?> 🍔</div>
+                    <div class="receipt-info">
+                        <?php echo htmlspecialchars($order['branch'] ?? 'Main Branch'); ?>, Perlis<br>
+                        Tel: +60 17-590 0799<br>
+                        www.bambamburger.com
+                    </div>
                 </div>
-            </div>
 
-            <!-- 2. ORDER INFO -->
-            <div class="receipt-meta-grid">
-                <div><div class="meta-label">ORDER ID</div><div>#BAM-<?php echo str_pad($order_id, 5, '0', STR_PAD_LEFT); ?></div></div>
-                <div style="text-align:right;"><div class="meta-label">DATE</div><div><?php echo date('d/m/Y h:i A', strtotime($order['created_at'])); ?></div></div>
-                
-                <div style="margin-top:10px;"><div class="meta-label">CUSTOMER</div><div><?php echo htmlspecialchars($order['customer_name']); ?></div></div>
-                <div style="text-align:right; margin-top:10px;"><div class="meta-label">PHONE</div><div><?php echo htmlspecialchars($order['customer_phone'] ?? 'N/A'); ?></div></div>
+                <!-- 2. ORDER INFO -->
+                <div class="receipt-meta-grid">
+                    <div>
+                        <div class="meta-label">ORDER ID</div>
+                        <div>#BAM-<?php echo str_pad($order_id, 5, '0', STR_PAD_LEFT); ?></div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="meta-label">DATE</div>
+                        <div><?php echo date('d/m/Y h:i A', strtotime($order['created_at'])); ?></div>
+                    </div>
 
-                <div style="margin-top:10px;"><div class="meta-label">BRANCH</div><div><?php echo htmlspecialchars($order['branch']); ?></div></div>
-                <div style="text-align:right; margin-top:10px;"><div class="meta-label">ORDER TYPE</div><div><?php echo htmlspecialchars($order['order_type']); ?></div></div>
-                
-                <div style="margin-top:10px;"><div class="meta-label">PAYMENT METHOD</div><div><?php 
-                    $pm = $order['payment_method'];
-                    echo ($pm === 'TnG') ? 'TnG E-Wallet' : (($pm === 'ToyyibPay') ? 'Online Banking (ToyyibPay)' : htmlspecialchars($pm)); 
-                ?></div></div>
-                <div style="text-align:right; margin-top:10px;"><div class="meta-label">PAYMENT STATUS</div><div style="font-weight:bold; color: <?php echo $isPaid ? '#2ecc71' : '#f1c40f'; ?>;"><?php echo htmlspecialchars($order['payment_status'] ?? 'Pending'); ?></div></div>
+                    <div style="margin-top:10px;">
+                        <div class="meta-label">CUSTOMER</div>
+                        <div><?php echo htmlspecialchars($order['customer_name']); ?></div>
+                    </div>
+                    <div style="text-align:right; margin-top:10px;">
+                        <div class="meta-label">PHONE</div>
+                        <div><?php echo htmlspecialchars($order['customer_phone'] ?? 'N/A'); ?></div>
+                    </div>
 
-                <?php if ($isPaid && !empty($order['paid_at'])): ?>
-                <div style="margin-top:10px;"><div class="meta-label">PAID AT</div><div><?php echo date('d/m/Y h:i A', strtotime($order['paid_at'])); ?></div></div>
-                <div style="text-align:right; margin-top:10px;"><div class="meta-label">STAFF</div><div><?php echo htmlspecialchars($order['staff_name'] ?? 'N/A'); ?></div></div>
-                <?php endif; ?>
-                <div style="text-align:right; margin-top:10px; grid-column: span 2; border-top:1px dashed #eee; padding-top:10px;"><div class="meta-label">ORDER STATUS</div><div id="receipt-status-text" style="text-transform:uppercase; font-weight:bold;"><?php echo htmlspecialchars($order['status']); ?></div></div>
+                    <div style="margin-top:10px;">
+                        <div class="meta-label">BRANCH</div>
+                        <div><?php echo htmlspecialchars($order['branch']); ?></div>
+                    </div>
+                    <div style="text-align:right; margin-top:10px;">
+                        <div class="meta-label">ORDER TYPE</div>
+                        <div><?php echo htmlspecialchars($order['order_type']); ?></div>
+                    </div>
 
-                <?php if(!empty($order['address'])): ?>
-                <div style="margin-top:10px; grid-column: span 2; border-top:1px dashed #eee; padding-top:10px;">
-                    <div class="meta-label">DELIVERY ADDRESS</div>
-                    <div style="font-size:11px; margin-top:2px;"><?php echo nl2br(htmlspecialchars($order['address'])); ?></div>
+                    <div style="margin-top:10px;">
+                        <div class="meta-label">PAYMENT METHOD</div>
+                        <div><?php
+                        $pm = $order['payment_method'];
+                        echo ($pm === 'TnG') ? 'TnG E-Wallet' : (($pm === 'ToyyibPay') ? 'Online Banking (ToyyibPay)' : htmlspecialchars($pm));
+                        ?></div>
+                    </div>
+                    <div style="text-align:right; margin-top:10px;">
+                        <div class="meta-label">PAYMENT STATUS</div>
+                        <div style="font-weight:bold; color: <?php echo $isPaid ? '#2ecc71' : '#f1c40f'; ?>;">
+                            <?php echo htmlspecialchars($order['payment_status'] ?? 'Pending'); ?></div>
+                    </div>
+
+                    <?php if ($isPaid && !empty($order['paid_at'])): ?>
+                        <div style="margin-top:10px;">
+                            <div class="meta-label">PAID AT</div>
+                            <div><?php echo date('d/m/Y h:i A', strtotime($order['paid_at'])); ?></div>
+                        </div>
+                        <div style="text-align:right; margin-top:10px;">
+                            <div class="meta-label">STAFF</div>
+                            <div><?php echo htmlspecialchars($order['staff_name'] ?? 'N/A'); ?></div>
+                        </div>
+                    <?php endif; ?>
+                    <div
+                        style="text-align:right; margin-top:10px; grid-column: span 2; border-top:1px dashed #eee; padding-top:10px;">
+                        <div class="meta-label">ORDER STATUS</div>
+                        <div id="receipt-status-text" style="text-transform:uppercase; font-weight:bold;">
+                            <?php echo htmlspecialchars($order['status']); ?></div>
+                    </div>
+
+                    <?php if (!empty($order['address'])): ?>
+                        <div style="margin-top:10px; grid-column: span 2; border-top:1px dashed #eee; padding-top:10px;">
+                            <div class="meta-label">DELIVERY ADDRESS</div>
+                            <div style="font-size:11px; margin-top:2px;">
+                                <?php echo nl2br(htmlspecialchars($order['address'])); ?></div>
+                        </div>
+                    <?php endif; ?>
                 </div>
-                <?php endif; ?>
+
+                <!-- 3. ITEM LIST -->
+                <table class="receipt-items-table">
+                    <thead>
+                        <tr>
+                            <th style="width:50%">ITEM</th>
+                            <th style="width:15%; text-align:center;">QTY</th>
+                            <th style="width:35%; text-align:right;">PRICE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($order_items as $item): ?>
+                            <tr>
+                                <td>
+                                    <strong><?php echo htmlspecialchars($item['item_name']); ?></strong>
+                                    <?php if ($item['variant']): ?><br><small
+                                            style="color:#666;"><?php echo htmlspecialchars($item['variant']); ?></small><?php endif; ?>
+                                    <?php if (!empty($item['customization'])): ?><br><small
+                                            style="color:#888; font-style:italic;">Note:
+                                            <?php echo htmlspecialchars($item['customization']); ?></small><?php endif; ?>
+                                </td>
+                                <td style="text-align:center;">x<?php echo $item['qty']; ?></td>
+                                <td class="item-price">RM <?php echo number_format($item['price'] * $item['qty'], 2); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+                <!-- 4. TOTAL -->
+                <div class="receipt-total-section">
+                    <div class="total-row grand-total"><span>TOTAL</span><span>RM
+                            <?php echo number_format($order['total_amount'], 2); ?></span></div>
+                </div>
+
+                <!-- CUSTOMER CONFIRMATION BUTTON -->
+                <button type="button" onclick="confirmOrder()" class="btn-confirm" id="btn-confirm-order"
+                    style="display: <?php echo ($status == 'delivery') ? 'block' : 'none'; ?>;">
+                    ✅ Order Received / Picked Up
+                </button>
+
+                <button onclick="window.print()" class="print-btn">🖨️ Print Receipt</button>
             </div>
-
-            <!-- 3. ITEM LIST -->
-            <table class="receipt-items-table">
-                <thead>
-                    <tr><th style="width:50%">ITEM</th><th style="width:15%; text-align:center;">QTY</th><th style="width:35%; text-align:right;">PRICE</th></tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($order_items as $item): ?>
-                    <tr>
-                        <td>
-                            <strong><?php echo htmlspecialchars($item['item_name']); ?></strong>
-                            <?php if($item['variant']): ?><br><small style="color:#666;"><?php echo htmlspecialchars($item['variant']); ?></small><?php endif; ?>
-                            <?php if(!empty($item['customization'])): ?><br><small style="color:#888; font-style:italic;">Note: <?php echo htmlspecialchars($item['customization']); ?></small><?php endif; ?>
-                        </td>
-                        <td style="text-align:center;">x<?php echo $item['qty']; ?></td>
-                        <td class="item-price">RM <?php echo number_format($item['price'] * $item['qty'], 2); ?></td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-
-            <!-- 4. TOTAL -->
-            <div class="receipt-total-section">
-                <div class="total-row grand-total"><span>TOTAL</span><span>RM <?php echo number_format($order['total_amount'], 2); ?></span></div>
-            </div>
-
-            <!-- CUSTOMER CONFIRMATION BUTTON -->
-            <button type="button" onclick="confirmOrder()" class="btn-confirm" id="btn-confirm-order" style="display: <?php echo ($status == 'delivery') ? 'block' : 'none'; ?>;">
-                ✅ Order Received / Picked Up
-            </button>
-
-            <button onclick="window.print()" class="print-btn">🖨️ Print Receipt</button>
-        </div>
         <?php endif; ?>
 
         <!-- RATE YOUR ORDER SECTION -->
-        <?php 
-            $showRating = ($status == 'delivered' && empty($order['rating']));
-            $alreadyRated = !empty($order['rating']);
+        <?php
+        $showRating = ($status == 'delivered' && empty($order['rating']));
+        $alreadyRated = !empty($order['rating']);
         ?>
-        
+
         <div class="rating-section" id="rating-card" style="display: <?php echo $showRating ? 'block' : 'none'; ?>;">
             <h3 style="margin:0 0 10px 0; color:#ff5100;">Rate Your Meal! ⭐</h3>
             <p style="font-size:0.9rem; color:#666;">How was your Bambam Burger?</p>
-            
-            <form method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="order_id" value="<?php echo $order_id; ?>">
+
+            <form nput type="hidden" name="order_id" value="<?php echo $order_id; ?>">
                 <input type="hidden" name="submit_rating" value="1">
                 <input type="hidden" name="rating" id="rating-value" value="5">
-                
+
                 <div class="rating-stars">
-                    <i class="star selected" onclick="setRating(1)">★</i><i class="star selected" onclick="setRating(2)">★</i><i class="star selected" onclick="setRating(3)">★</i><i class="star selected" onclick="setRating(4)">★</i><i class="star selected" onclick="setRating(5)">★</i>
+                    <i class="star selected" onclick="setRating(1)">★</i><i class="star selected"
+                        onclick="setRating(2)">★</i><i class="star selected" onclick="setRating(3)">★</i><i
+                        class="star selected" onclick="setRating(4)">★</i><i class="star selected"
+                        onclick="setRating(5)">★</i>
                 </div>
-                
+
                 <div class="reaction-group">
                     <label class="reaction-opt" onclick="selectReaction(this)">
                         <input type="radio" name="reaction" value="Sedap" style="display:none;">
@@ -560,15 +786,19 @@ $current = $stages[$status] ?? $stages['placed'];
 
                 <div class="file-upload-wrapper">
                     <label for="review_img" class="file-upload-label">📷 Upload Photo (Optional)</label>
-                    <input type="file" id="review_img" name="review_image" accept="image/*" onchange="previewReviewImg(this)">
+                    <input type="file" id="review_img" name="review_image" accept="image/*"
+                        onchange="previewReviewImg(this)">
                     <img id="review-preview" class="preview-thumb">
                 </div>
 
-                <textarea name="review" class="rating-textarea" rows="3" placeholder="Write a review (optional)..."></textarea>
-                <button type="submit" class="btn-submit-rating">Submit Review</button>
-            </form>
+                <textarea name="review" class="rating-textarea" rows="3"
+                    placeholder="Write a review (optional)..."></textarea>
+                <button type="button" onclick="submitReviewAjax()" class="btn-submit-rating">Submit Review</button>
         </div>
-        <?php if($alreadyRated): ?><div style="background:rgba(255,255,255,0.1); padding:15px; border-radius:10px; margin-top:20px; text-align:center;">Thanks for your rating! ⭐</div><?php endif; ?>
+        <?php if ($alreadyRated): ?>
+            <div
+                style="background:rgba(255,255,255,0.1); padding:15px; border-radius:10px; margin-top:20px; text-align:center;">
+                Thanks for your rating! ⭐</div><?php endif; ?>
 
         <div class="order-meta">
             <span>🛵 Est. Delivery: 15-20 Mins</span><br>
@@ -592,7 +822,7 @@ $current = $stages[$status] ?? $stages['placed'];
         fetch('get_status.php?id=' + orderId)
             .then(response => response.json())
             .then(data => {
-                if(data.status) {
+                if (data.status) {
                     let rawStatus = data.status.toLowerCase();
                     let mappedStatus = statusMap[rawStatus] || 'placed';
 
@@ -608,20 +838,20 @@ $current = $stages[$status] ?? $stages['placed'];
                     document.querySelector('.status-title').innerText = stage.title;
                     document.querySelector('.status-desc').innerText = stage.desc;
                     document.querySelector('.progress-fill').style.width = stage.percent;
-                    
+
                     // Update Image & Animations
                     let img = document.querySelector('.main-status-img');
                     let stageContainer = document.querySelector('.illustration-stage');
-                    
+
                     // Update Fallback Emoji
                     if (img.nextElementSibling) {
                         img.nextElementSibling.innerText = stage.fallback;
                     }
-                    
-                    if(img.getAttribute('src') !== stage.image) {
+
+                    if (img.getAttribute('src') !== stage.image) {
                         img.src = stage.image;
                         img.style.display = 'block'; // Reset if previously hidden by error
-                        if(img.nextElementSibling) img.nextElementSibling.style.display = 'none';
+                        if (img.nextElementSibling) img.nextElementSibling.style.display = 'none';
                     }
 
                     // Reset classes
@@ -654,7 +884,7 @@ $current = $stages[$status] ?? $stages['placed'];
                     const dots = document.querySelectorAll('.dot');
                     const stageKeys = ['placed', 'preparing', 'delivery', 'delivered'];
                     const currentIndex = stageKeys.indexOf(mappedStatus);
-                    
+
                     dots.forEach((dot, index) => {
                         if (index <= currentIndex) dot.classList.add('active');
                         else dot.classList.remove('active');
@@ -688,14 +918,14 @@ $current = $stages[$status] ?? $stages['placed'];
         formData.append('ajax', '1');
 
         fetch('receipt.php', { method: 'POST', body: formData })
-        .then(res => res.json())
-        .then(data => {
-            if(data.success) {
-                btn.style.display = 'none'; // Hide button
-                document.getElementById('rating-card').style.display = 'block'; // Show Rating
-                updateTracker(); // Force UI update
-            }
-        });
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    btn.style.display = 'none'; // Hide button
+                    document.getElementById('rating-card').style.display = 'block'; // Show Rating
+                    updateTracker(); // Force UI update
+                }
+            });
     }
 
     // STAR RATING LOGIC
@@ -703,7 +933,7 @@ $current = $stages[$status] ?? $stages['placed'];
         document.getElementById('rating-value').value = n;
         const stars = document.querySelectorAll('.star');
         stars.forEach((s, i) => {
-            if(i < n) s.classList.add('selected');
+            if (i < n) s.classList.add('selected');
             else s.classList.remove('selected');
         });
     }
@@ -717,13 +947,65 @@ $current = $stages[$status] ?? $stages['placed'];
     function previewReviewImg(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 const img = document.getElementById('review-preview');
                 img.src = e.target.result;
                 img.style.display = 'block';
             }
             reader.readAsDataURL(input.files[0]);
         }
+    }
+
+    function submitReviewAjax() {
+        // 1. Ambil data dari input
+        const rating = $('#rating-value').val();
+        const review = $('.rating-textarea').val();
+
+        // 2. Cara paling selamat ambil ID dari URL (?id=88)
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('id');
+
+        // Validation
+        if (!rating || rating == 0) {
+            alert("Please select a star rating!");
+            return;
+        }
+
+        if (!orderId) {
+            alert("Order ID not found in URL!");
+            return;
+        }
+
+        const btn = $('.btn-submit-rating');
+        btn.prop('disabled', true).text('Submitting...');
+
+        $.ajax({
+            url: 'update_review.php',
+            type: 'POST',
+            dataType: 'json', // Bagitahu jQuery kita expect JSON dari PHP
+            data: {
+                order_id: orderId, // Nama variable ni kena sama dengan $_POST['order_id'] kat PHP
+                rating: rating,
+                review: review
+            },
+            success: function (response) {
+                console.log("Server Response:", response);
+                if (response.success) {
+                    // Efek lepas berjaya
+                    $('#rating-card').fadeOut(300, function () {
+                        $(this).after('<div style="background:rgba(46, 204, 113, 0.1); color:#2ecc71; padding:20px; border-radius:10px; margin-top:20px; text-align:center; border: 1px solid #2ecc71; font-weight:bold;">Review submitted! Thank you. ⭐</div>');
+                    });
+                } else {
+                    alert("Error: " + response.message);
+                    btn.prop('disabled', false).text('Submit Review');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error("AJAX Error Details:", xhr.responseText);
+                alert("Connection error. Check console (F12) for details.");
+                btn.prop('disabled', false).text('Submit Review');
+            }
+        });
     }
 </script>
 
