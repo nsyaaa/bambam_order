@@ -248,6 +248,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
                 break;
 
+            case 'delete_order':
+                if (isset($_POST['order_id'])) {
+                    try {
+                        $stmt = $pdo->prepare("DELETE FROM order_items WHERE order_id = ?");
+                        $stmt->execute([$_POST['order_id']]);
+                        $stmt = $pdo->prepare("DELETE FROM orders WHERE id = ?");
+                        $stmt->execute([$_POST['order_id']]);
+                        $message = "Order #{$_POST['order_id']} deleted successfully!";
+                        logActivity($pdo, $currentUserId, $currentUserName, "Delete Order", "Deleted Order #{$_POST['order_id']}");
+                    } catch (PDOException $e) {
+                        $message = "Error: " . $e->getMessage();
+                    }
+                }
+                break;
+
+            case 'bulk_update_order_status':
+                if (isset($_POST['order_ids'], $_POST['new_status'])) {
+                    try {
+                        $ids = explode(',', $_POST['order_ids']);
+                        $inQuery = implode(',', array_fill(0, count($ids), '?'));
+                        $stmt = $pdo->prepare("UPDATE orders SET status = ? WHERE id IN ($inQuery)");
+                        $stmt->execute(array_merge([$_POST['new_status']], $ids));
+                        $message = count($ids) . " orders updated to " . $_POST['new_status'];
+                    } catch (PDOException $e) {
+                        $message = "Error: " . $e->getMessage();
+                    }
+                }
+                break;
+
             case 'toggle_availability':
                 if (isset($_POST['item_id'], $_POST['status'])) {
                     try {
@@ -286,6 +315,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $stmt = $pdo->prepare("INSERT INTO menu_items (category, name, description, price, cost_price, has_protein, variants, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                         $stmt->execute([$_POST['category'], $_POST['name'], $_POST['description'], $_POST['price'], $_POST['cost_price'] ?? 0, isset($_POST['has_protein']) ? 1 : 0, $variants, $image_name]);
                         $message = "Menu item created!";
+                    } catch (Exception $e) {
+                        $message = "Error: " . $e->getMessage();
+                    }
+                }
+                break;
+
+            case 'update_menu_item':
+                if (isset($_POST['item_id'], $_POST['name'], $_POST['category'], $_POST['price'])) {
+                    try {
+                        // Handle Variants
+                        $variantsData = [];
+                        if (isset($_POST['variant_name']) && is_array($_POST['variant_name'])) {
+                            foreach ($_POST['variant_name'] as $idx => $vname) {
+                                if (!empty(trim($vname))) {
+                                    $variantsData[] = ['name' => trim($vname), 'price' => (float) ($_POST['variant_price'][$idx] ?? 0)];
+                                }
+                            }
+                        }
+                        $variants = !empty($variantsData) ? json_encode($variantsData) : null;
+
+                        $stmt = $pdo->prepare("UPDATE menu_items SET category = ?, name = ?, description = ?, price = ?, cost_price = ?, has_protein = ?, variants = ? WHERE id = ?");
+                        $stmt->execute([$_POST['category'], $_POST['name'], $_POST['description'], $_POST['price'], $_POST['cost_price'] ?? 0, isset($_POST['has_protein']) ? 1 : 0, $variants, $_POST['item_id']]);
+                        $message = "Menu item updated!";
                     } catch (Exception $e) {
                         $message = "Error: " . $e->getMessage();
                     }
@@ -352,20 +404,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $_SESSION['admin_msg'] = "Data missing! ID: $b_id, Name: $b_name, Phone: $b_phone";
                 }
 
-                header("Location: admin.php?view=branches");
+                header("Location: admin.php?view=branches&status=success");
                 exit;
 
             // (Case lain seperti reply_review dsb boleh dikekalkan dengan format yang sama)
         }
 
         // --- GLOBAL REDIRECT (Satu tempat je) ---
+        $action = $_POST['action'] ?? '';
         $view = $_POST['view'] ?? '';
+
+        // Auto-detect view if not explicitly sent by form to ensure persistence
+        if (empty($view)) {
+            if (in_array($action, ['delete_order', 'bulk_update_order_status', 'update_order_status', 'mark_as_paid'])) $view = 'orders';
+            elseif (in_array($action, ['create_menu_item', 'update_menu_item', 'delete_menu_item', 'toggle_availability'])) $view = 'menu';
+            elseif (in_array($action, ['create_user', 'delete_user', 'update_user_role', 'reset_user_password'])) $view = 'staff';
+            elseif (in_array($action, ['add_stock', 'update_stock', 'delete_stock'])) $view = 'inventory';
+        }
+
         $redirectUrl = "admin.php";
         $params = [];
         if ($view)
             $params[] = "view=" . urlencode($view);
         if ($message)
             $params[] = "message=" . urlencode($message);
+
+        // Add status=success for all successful operations
+        if ($message && strpos(strtolower($message), 'error') === false) {
+            $params[] = "status=success";
+        }
 
         if (!empty($params)) {
             $redirectUrl .= "?" . implode('&', $params);
@@ -2800,7 +2867,7 @@ try {
                         <div class="form-group"><label>Category</label><select name="category" required>
                                 <option value="burger">Burger</option>
                                 <option value="special">Special</option>
-                                <option value="addon">Add On</option>
+                                <option value="add-on">Add-On</option>
                                 <option value="minuman">Minuman</option>
                             </select></div>
                         <div class="form-group" style="grid-column: span 2;"><label>Item Name</label><input type="text"
@@ -2838,7 +2905,7 @@ try {
                             <button class="filter-pill active" onclick="filterMenu('all', this)">All</button>
                             <button class="filter-pill" onclick="filterMenu('burger', this)">Burgers</button>
                             <button class="filter-pill" onclick="filterMenu('special', this)">Specials</button>
-                            <button class="filter-pill" onclick="filterMenu('addon', this)">Add-Ons</button>
+                            <button class="filter-pill" onclick="filterMenu('add-on', this)">Add-Ons</button>
                             <button class="filter-pill" onclick="filterMenu('minuman', this)">Drinks</button>
                         </div>
                     </div>
@@ -3183,167 +3250,138 @@ try {
             </div>
 
             <!-- VIEW: BRANCHES -->
-            <div id="view-branches" class="view-section">
-                <div class="panel-card">
-                    <h3 style="margin-top:0; color: #ffffff;">🏪 Branch Management</h3>
+           <div id="view-branches" class="view-section">
+    <div class="panel-card">
+        <h3 style="margin-top:0; color: #ffffff;">🏪 Branch Management</h3>
 
-                    <div class="branch-grid">
-                        <?php
-                        // Ambil data terus dari database supaya ID sentiasa sync
-                        $stmt = $pdo->query("SELECT * FROM branches ORDER BY name ASC");
-                        $branchesList = $stmt->fetchAll();
+        <div class="branch-grid">
+            <?php
+            // Ambil data terus dari database supaya ID sentiasa sync
+            $stmt = $pdo->query("SELECT * FROM branches ORDER BY name ASC");
+            $branchesList = $stmt->fetchAll();
 
-                        if (!empty($branchesList)):
-                            foreach ($branchesList as $branch): ?>
-                                <div class="management-card">
-                                    <h3><?php echo htmlspecialchars($branch['name']); ?></h3>
-                                    <p>📞 <?php echo htmlspecialchars($branch['phone']); ?></p>
-                                    <div class="management-actions">
-                                        <a href="tel:<?php echo preg_replace('/[^0-9]/', '', $branch['phone']); ?>"
-                                            class="btn-call">
-                                            <i class="fas fa-phone-alt"></i> Call
-                                        </a>
-                                        <button type="button" class="btn-edit"
-                                            onclick="openBranchModal(<?php echo $branch['id']; ?>, '<?php echo addslashes($branch['name']); ?>', '<?php echo addslashes($branch['phone']); ?>')">
-                                            Edit
-                                        </button>
-                                    </div>
-                                </div>
-                            <?php endforeach;
-                        else: ?>
-                            <p style="color: #a0aec0;">No branches found in database.</p>
-                        <?php endif; ?>
+            if (!empty($branchesList)): 
+                foreach ($branchesList as $branch): ?>
+                    <div class="management-card">
+                        <h3><?php echo htmlspecialchars($branch['name']); ?></h3>
+                        <p>📞 <?php echo htmlspecialchars($branch['phone']); ?></p>
+                        <div class="management-actions">
+                            <a href="tel:<?php echo preg_replace('/[^0-9]/', '', $branch['phone']); ?>" class="btn-call">
+                                <i class="fas fa-phone-alt"></i> Call
+                            </a>
+                            <button type="button" class="btn-edit"
+                                onclick="openBranchModal(<?php echo $branch['id']; ?>, '<?php echo addslashes($branch['name']); ?>', '<?php echo addslashes($branch['phone']); ?>')">
+                                Edit
+                            </button>
+                        </div>
                     </div>
-                </div>
+                <?php endforeach; 
+            else: ?>
+                <p style="color: #a0aec0;">No branches found in database.</p>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<div id="branchModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#1a1a1a; width:350px; padding:25px; border-radius:15px; border:1px solid #ff6600; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+        <h3 style="color:white; margin-top:0;">Edit Branch Details</h3>
+        <form method="POST" action="admin.php">
+            <input type="hidden" name="action" value="update_branch">
+            <input type="hidden" name="branch_id" id="modal_branch_id">
+            
+            <div style="margin-bottom:15px;">
+                <label style="color:#a0aec0; font-size:12px;">Branch Name</label>
+                <input type="text" name="name" id="modal_branch_name" required 
+                       style="width:100%; padding:10px; background:#2d2d2d; border:1px solid #444; border-radius:6px; color:white; margin-top:5px;">
             </div>
-
-            <div id="branchModal"
-                style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center;">
-                <div
-                    style="background:#1a1a1a; width:350px; padding:25px; border-radius:15px; border:1px solid #ff6600; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-                    <h3 style="color:white; margin-top:0;">Edit Branch Details</h3>
-                    <form method="POST" action="admin.php">
-                        <input type="hidden" name="action" value="update_branch">
-                        <input type="hidden" name="branch_id" id="modal_branch_id">
-
-                        <div style="margin-bottom:15px;">
-                            <label style="color:#a0aec0; font-size:12px;">Branch Name</label>
-                            <input type="text" name="name" id="modal_branch_name" required
-                                style="width:100%; padding:10px; background:#2d2d2d; border:1px solid #444; border-radius:6px; color:white; margin-top:5px;">
-                        </div>
-
-                        <div style="margin-bottom:20px;">
-                            <label style="color:#a0aec0; font-size:12px;">Phone Number</label>
-                            <input type="text" name="phone" id="modal_branch_phone" required
-                                style="width:100%; padding:10px; background:#2d2d2d; border:1px solid #444; border-radius:6px; color:white; margin-top:5px;">
-                        </div>
-
-                        <div style="display:flex; gap:10px;">
-                            <button type="submit" class="btn-edit" style="flex:2; padding:12px;">Save Changes</button>
-                            <button type="button" onclick="closeBranchModal()"
-                                style="flex:1; background:none; border:1px solid #444; color:white; border-radius:6px; cursor:pointer;">Cancel</button>
-                        </div>
-                    </form>
-                </div>
+            
+            <div style="margin-bottom:20px;">
+                <label style="color:#a0aec0; font-size:12px;">Phone Number</label>
+                <input type="text" name="phone" id="modal_branch_phone" required 
+                       style="width:100%; padding:10px; background:#2d2d2d; border:1px solid #444; border-radius:6px; color:white; margin-top:5px;">
             </div>
+            
+            <div style="display:flex; gap:10px;">
+                <button type="submit" class="btn-edit" style="flex:2; padding:12px;">Save Changes</button>
+                <button type="button" onclick="closeBranchModal()" style="flex:1; background:none; border:1px solid #444; color:white; border-radius:6px; cursor:pointer;">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-            <script>
-                // Function untuk masukkan data ke dalam modal dan tunjukkan modal
-                function openBranchModal(id, name, phone) {
-                    document.getElementById('modal_branch_id').value = id;
-                    document.getElementById('modal_branch_name').value = name;
-                    document.getElementById('modal_branch_phone').value = phone;
-                    document.getElementById('branchModal').style.display = 'flex';
-                }
+<script>
+// Function untuk masukkan data ke dalam modal dan tunjukkan modal
+function openBranchModal(id, name, phone) {
+    document.getElementById('modal_branch_id').value = id;
+    document.getElementById('modal_branch_name').value = name;
+    document.getElementById('modal_branch_phone').value = phone;
+    document.getElementById('branchModal').style.display = 'flex';
+}
 
-                function closeBranchModal() {
-                    document.getElementById('branchModal').style.display = 'none';
-                }
+function closeBranchModal() {
+    document.getElementById('branchModal').style.display = 'none';
+}
 
-                // Tutup modal kalau user klik luar dari kotak modal
-                window.onclick = function (event) {
-                    let modal = document.getElementById('branchModal');
-                    if (event.target == modal) {
-                        closeBranchModal();
-                    }
-                }
-            </script>
+// Tutup modal kalau user klik luar dari kotak modal
+window.onclick = function(event) {
+    let modal = document.getElementById('branchModal');
+    if (event.target == modal) {
+        closeBranchModal();
+    }
+}
+</script>
 
-            <style>
-                /* Pakai style asal kau cuma aku kemaskan sikit grid dia */
-                .branch-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-                    gap: 20px;
-                    margin-top: 20px;
-                }
+<style>
+    /* Pakai style asal kau cuma aku kemaskan sikit grid dia */
+    .branch-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
 
-                .management-card {
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 12px;
-                    padding: 20px;
-                    text-align: center;
-                    transition: all 0.2s ease;
-                }
+    .management-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        transition: all 0.2s ease;
+    }
 
-                .management-card:hover {
-                    background: rgba(255, 255, 255, 0.08);
-                    border-color: #ff6600;
-                    transform: translateY(-5px);
-                }
+    .management-card:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: #ff6600;
+        transform: translateY(-5px);
+    }
 
-                .management-card h3 {
-                    color: #ffffff;
-                    margin: 0 0 10px 0;
-                    font-size: 18px;
-                }
+    .management-card h3 { color: #ffffff; margin: 0 0 10px 0; font-size: 18px; }
+    .management-card p { color: #a0aec0; margin: 0 0 20px 0; font-size: 14px; }
 
-                .management-card p {
-                    color: #a0aec0;
-                    margin: 0 0 20px 0;
-                    font-size: 14px;
-                }
+    .management-actions { display: flex; gap: 10px; justify-content: center; }
 
-                .management-actions {
-                    display: flex;
-                    gap: 10px;
-                    justify-content: center;
-                }
+    .btn-call, .btn-edit {
+        padding: 8px 12px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: bold;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: none;
+        cursor: pointer;
+        flex: 1;
+        justify-content: center;
+        color: white !important;
+    }
 
-                .btn-call,
-                .btn-edit {
-                    padding: 8px 12px;
-                    border-radius: 6px;
-                    text-decoration: none;
-                    font-size: 13px;
-                    font-weight: bold;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    border: none;
-                    cursor: pointer;
-                    flex: 1;
-                    justify-content: center;
-                    color: white !important;
-                }
-
-                .btn-call {
-                    background-color: #2ecc71;
-                }
-
-                .btn-edit {
-                    background-color: #ff6600;
-                }
-
-                .btn-call:hover {
-                    background-color: #27ae60;
-                }
-
-                .btn-edit:hover {
-                    background-color: #e65c00;
-                }
-            </style>
+    .btn-call { background-color: #2ecc71; }
+    .btn-edit { background-color: #ff6600; }
+    .btn-call:hover { background-color: #27ae60; }
+    .btn-edit:hover { background-color: #e65c00; }
+</style>
             <!-- VIEW: ACTIVITY LOGS -->
             <div id="view-logs" class="view-section">
                 <div class="panel-card">
@@ -3495,7 +3533,7 @@ try {
                 <div class="form-group"><label>Category</label><select id="edit-item-category" name="category" required>
                         <option value="burger">Burger</option>
                         <option value="special">Special</option>
-                        <option value="addon">Add-On</option>
+                        <option value="add-on">Add-On</option>
                         <option value="minuman">Minuman</option>
                     </select></div>
                 <div class="form-group" style="grid-column: span 2;"><label>Item Name</label><input type="text"
@@ -4049,7 +4087,7 @@ try {
         const categoryColorMap = {
             'burger': '#ff5100',      // Main Orange
             'special': '#9b59b6',     // Purple
-            'addon': '#2ecc71',       // Green
+            'add-on': '#2ecc71',       // Green
             'minuman': '#3498db',     // Blue
             'uncategorized': '#95a5a6' // Grey
         };

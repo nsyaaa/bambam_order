@@ -759,6 +759,8 @@ $current = $stages[$status] ?? $stages['placed'];
             <p style="font-size:0.9rem; color:#666;">How was your Bambam Burger?</p>
 
             <form nput type="hidden" name="order_id" value="<?php echo $order_id; ?>">
+            <form id="reviewForm">
+                <input type="hidden" name="order_id" value="<?php echo $order_id; ?>">
                 <input type="hidden" name="submit_rating" value="1">
                 <input type="hidden" name="rating" id="rating-value" value="5">
 
@@ -794,6 +796,7 @@ $current = $stages[$status] ?? $stages['placed'];
                 <textarea name="review" class="rating-textarea" rows="3"
                     placeholder="Write a review (optional)..."></textarea>
                 <button type="button" onclick="submitReviewAjax()" class="btn-submit-rating">Submit Review</button>
+            </form>
         </div>
         <?php if ($alreadyRated): ?>
             <div
