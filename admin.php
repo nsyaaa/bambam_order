@@ -3189,39 +3189,17 @@ try {
 
                     <div class="branch-grid">
                         <?php
-                        // Gabungkan manual list dengan database list supaya senang loop sekali jalan
-                        $staticBranches = [
-                            ['id' => 1, 'name' => 'Kangar', 'phone' => '017-590 0799'],
-                            ['id' => 2, 'name' => 'Jejawi', 'phone' => '013-777 1763'],
-                            ['id' => 3, 'name' => 'Arau', 'phone' => '019-551 1765'],
-                            ['id' => 4, 'name' => 'Kuala Perlis', 'phone' => '011-1989 8669'],
-                            ['id' => 5, 'name' => 'Beseri', 'phone' => '011-1006 4068']
-                        ];
+                        // Ambil data terus dari database supaya ID sentiasa sync
+                        $stmt = $pdo->query("SELECT * FROM branches ORDER BY name ASC");
+                        $branchesList = $stmt->fetchAll();
 
-                        // Loop cawangan sedia ada
-                        foreach ($staticBranches as $b): ?>
-                            <div class="management-card">
-                                <h3><?php echo $b['name']; ?></h3>
-                                <p>📞 <?php echo $b['phone']; ?></p>
-                                <div class="management-actions">
-                                    <a href="tel:<?php echo str_replace(' ', '', $b['phone']); ?>" class="btn-call">
-                                        <i class="fas fa-phone-alt"></i> Call
-                                    </a>
-                                    <button type="button" class="btn-edit"
-                                        onclick="openBranchModal(<?php echo $b['id']; ?>, '<?php echo $b['name']; ?>', '<?php echo $b['phone']; ?>')">
-                                        Edit
-                                    </button>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-
-                        <?php if (!empty($branchesList)): ?>
-                            <?php foreach ($branchesList as $branch): ?>
+                        if (!empty($branchesList)):
+                            foreach ($branchesList as $branch): ?>
                                 <div class="management-card">
                                     <h3><?php echo htmlspecialchars($branch['name']); ?></h3>
                                     <p>📞 <?php echo htmlspecialchars($branch['phone']); ?></p>
                                     <div class="management-actions">
-                                        <a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $branch['phone']); ?>"
+                                        <a href="tel:<?php echo preg_replace('/[^0-9]/', '', $branch['phone']); ?>"
                                             class="btn-call">
                                             <i class="fas fa-phone-alt"></i> Call
                                         </a>
@@ -3231,14 +3209,68 @@ try {
                                         </button>
                                     </div>
                                 </div>
-                            <?php endforeach; ?>
+                            <?php endforeach;
+                        else: ?>
+                            <p style="color: #a0aec0;">No branches found in database.</p>
                         <?php endif; ?>
                     </div>
                 </div>
             </div>
 
+            <div id="branchModal"
+                style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center;">
+                <div
+                    style="background:#1a1a1a; width:350px; padding:25px; border-radius:15px; border:1px solid #ff6600; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                    <h3 style="color:white; margin-top:0;">Edit Branch Details</h3>
+                    <form method="POST" action="admin.php">
+                        <input type="hidden" name="action" value="update_branch">
+                        <input type="hidden" name="branch_id" id="modal_branch_id">
+
+                        <div style="margin-bottom:15px;">
+                            <label style="color:#a0aec0; font-size:12px;">Branch Name</label>
+                            <input type="text" name="name" id="modal_branch_name" required
+                                style="width:100%; padding:10px; background:#2d2d2d; border:1px solid #444; border-radius:6px; color:white; margin-top:5px;">
+                        </div>
+
+                        <div style="margin-bottom:20px;">
+                            <label style="color:#a0aec0; font-size:12px;">Phone Number</label>
+                            <input type="text" name="phone" id="modal_branch_phone" required
+                                style="width:100%; padding:10px; background:#2d2d2d; border:1px solid #444; border-radius:6px; color:white; margin-top:5px;">
+                        </div>
+
+                        <div style="display:flex; gap:10px;">
+                            <button type="submit" class="btn-edit" style="flex:2; padding:12px;">Save Changes</button>
+                            <button type="button" onclick="closeBranchModal()"
+                                style="flex:1; background:none; border:1px solid #444; color:white; border-radius:6px; cursor:pointer;">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <script>
+                // Function untuk masukkan data ke dalam modal dan tunjukkan modal
+                function openBranchModal(id, name, phone) {
+                    document.getElementById('modal_branch_id').value = id;
+                    document.getElementById('modal_branch_name').value = name;
+                    document.getElementById('modal_branch_phone').value = phone;
+                    document.getElementById('branchModal').style.display = 'flex';
+                }
+
+                function closeBranchModal() {
+                    document.getElementById('branchModal').style.display = 'none';
+                }
+
+                // Tutup modal kalau user klik luar dari kotak modal
+                window.onclick = function (event) {
+                    let modal = document.getElementById('branchModal');
+                    if (event.target == modal) {
+                        closeBranchModal();
+                    }
+                }
+            </script>
+
             <style>
-                /* Container utama untuk grid */
+                /* Pakai style asal kau cuma aku kemaskan sikit grid dia */
                 .branch-grid {
                     display: grid;
                     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -3246,19 +3278,19 @@ try {
                     margin-top: 20px;
                 }
 
-                /* Card design yang lebih kemas */
                 .management-card {
                     background: rgba(255, 255, 255, 0.05);
                     border: 1px solid rgba(255, 255, 255, 0.1);
                     border-radius: 12px;
                     padding: 20px;
                     text-align: center;
-                    transition: transform 0.2s ease;
+                    transition: all 0.2s ease;
                 }
 
                 .management-card:hover {
                     background: rgba(255, 255, 255, 0.08);
                     border-color: #ff6600;
+                    transform: translateY(-5px);
                 }
 
                 .management-card h3 {
@@ -3273,7 +3305,6 @@ try {
                     font-size: 14px;
                 }
 
-                /* Action buttons container */
                 .management-actions {
                     display: flex;
                     gap: 10px;
@@ -3293,7 +3324,6 @@ try {
                     border: none;
                     cursor: pointer;
                     flex: 1;
-                    /* Biar butang sama lebar */
                     justify-content: center;
                     color: white !important;
                 }
@@ -3314,7 +3344,6 @@ try {
                     background-color: #e65c00;
                 }
             </style>
-
             <!-- VIEW: ACTIVITY LOGS -->
             <div id="view-logs" class="view-section">
                 <div class="panel-card">
