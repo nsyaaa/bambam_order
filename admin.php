@@ -2524,7 +2524,7 @@ try {
                         <button class="filter-pill" onclick="filterOrders('Pending', this)">Pending</button>
                         <button class="filter-pill" onclick="filterOrders('Preparing', this)">Preparing</button>
                         <button class="filter-pill" onclick="filterOrders('Ready', this)">Ready</button>
-                        <button class="filter-pill" onclick="filterOrders('Completed', this)">Completed</button>
+                        <button class="filter-pill" onclick="filterOrders('Served', this)">Served</button>
                     </div>
 
                     <div id="bulk-actions-bar" class="bulk-actions">
@@ -2537,6 +2537,7 @@ try {
                             <select name="new_status" style="padding:5px; border-radius:5px; border:1px solid #ccc;">
                                 <option value="Preparing">Mark as Preparing</option>
                                 <option value="Ready">Mark as Ready</option>
+                                <option value="Served">Mark as Served</option>
                                 <option value="Completed">Mark as Completed</option>
                             </select>
                             <button type="submit" class="btn-primary"
@@ -2576,34 +2577,22 @@ try {
                                     $created = strtotime($order['created_at']);
                                     $diff = time() - $created;
                                     $mins = floor($diff / 60);
-                                    $urgencyClass = '';
-                                    if ($order['status'] == 'Pending') {
-                                        if ($mins > 120)
-                                            $urgencyClass = 'urgency-stale';
-                                        elseif ($mins > 20)
-                                            $urgencyClass = 'urgency-high';
-                                        elseif ($mins > 10)
-                                            $urgencyClass = 'urgency-medium';
-                                    }
 
-                                    $payStatus = $order['payment_status'] ?? 'Pending';
-                                    $isPaid = in_array($payStatus, ['Paid', 'Confirmed']);
+                                    // Sync terus dengan column 'status' database
+                                    $currentStatus = $order['status'] ?? 'Pending';
                                     $itemsJson = isset($ordersItemsMap[$order['id']]) ? json_encode($ordersItemsMap[$order['id']]) : '[]';
                                     $typeIcon = ($order['order_type'] == 'Delivery') ? '🛵' : '🛍️';
 
-                                    if ($order['status'] == 'Ready') {
-                                        $statusDisplay = '<span class="status-badge status-ready">Ready</span>';
-                                    } elseif (!$isPaid) {
-                                        $statusDisplay = '<span class="status-badge status-pending">Pending Payment</span>';
-                                    } elseif ($order['status'] == 'Pending') {
-                                        $statusDisplay = '<span class="status-badge status-pending">Pending Order</span>';
+                                    // Logic paparan badge ikut status database
+                                    $statusClass = strtolower($currentStatus);
+                                    $statusDisplay = '<span class="status-badge status-' . $statusClass . '">' . htmlspecialchars($currentStatus) . '</span>';
+
+                                    // Tambah timer kalau masih Pending
+                                    if ($currentStatus == 'Pending') {
                                         $statusDisplay .= '<div class="time-elapsed urgent">' . $mins . ' mins ago</div>';
-                                    } else {
-                                        $statusDisplay = '<span class="status-badge status-' . strtolower($order['status']) . '">' . htmlspecialchars($order['status']) . '</span>';
                                     }
                                     ?>
-                                    <tr class="order-row <?php echo $urgencyClass; ?>"
-                                        data-status="<?php echo $order['status']; ?>" style="height: 85px;">
+                                    <tr class="order-row" data-status="<?php echo $currentStatus; ?>" style="height: 85px;">
                                         <td style="vertical-align: middle; padding: 15px 20px;">
                                             <input type="checkbox" class="order-checkbox" value="<?php echo $order['id']; ?>"
                                                 onchange="updateBulkActions()">
@@ -2618,18 +2607,14 @@ try {
                                             <div class="customer-meta">
                                                 <span><?php echo htmlspecialchars($order['customer_phone'] ?? '-'); ?></span>
                                                 <span>•</span>
-                                                <span
-                                                    title="<?php echo htmlspecialchars($order['order_type']); ?>"><?php echo $typeIcon; ?>
+                                                <span><?php echo $typeIcon; ?>
                                                     <?php echo htmlspecialchars($order['order_type']); ?></span>
                                             </div>
                                         </td>
-                                        <td style="display: table-cell; vertical-align: middle !important; padding: 15px 20px;">
-                                            <div style="height: 100%; display: flex; align-items: center;">
-                                                <?php echo htmlspecialchars($order['branch'] ?? 'Main'); ?>
-                                            </div>
+                                        <td style="vertical-align: middle; padding: 15px 20px;">
+                                            <?php echo htmlspecialchars($order['branch'] ?? 'Main'); ?>
                                         </td>
-                                        <td class="text-right"
-                                            style="display: table-cell; vertical-align: middle !important; padding: 15px 20px;">
+                                        <td class="text-right" style="vertical-align: middle; padding: 15px 20px;">
                                             <span style="font-weight:700; color:#ffffff;">RM
                                                 <?php echo number_format($order['total'] ?? 0, 2); ?></span>
                                         </td>
@@ -2656,21 +2641,11 @@ try {
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
-                                <tr id="no-orders-row" style="display:none;">
-                                    <td colspan="7">
-                                        <div class="empty-state">
-                                            <div class="empty-icon">🔍</div>
-                                            <h3>No orders found</h3>
-                                            <p>Try adjusting your filters.</p>
-                                        </div>
-                                    </td>
-                                </tr>
                             </tbody>
                         </table>
                     <?php endif; ?>
                 </div>
             </div>
-
             <!-- VIEW: REVIEWS -->
             <div id="view-reviews" class="view-section">
                 <!-- Review Overview -->
