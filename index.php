@@ -174,72 +174,48 @@ body {
     </div>
 </section>
 
-<!-- NEW CAROUSEL SECTION -->
-<section class="nested-carousel-container">
-    <h2 style="text-align:center; color:white; font-family:'Fraunces', serif; margin-bottom:40px; font-size:2.5rem;">Our <span style="color:#ff5100;">Favorites</span></h2>
-    
-    <div class="swiper inner-slider">
-        <div class="swiper-wrapper">
-            <!-- Slide 1 -->
-            <div class="swiper-slide product-slide">
-                <img src="images/lavacheese.jpg" alt="Lava Cheese Burger" onerror="this.src='images/hero_burger.png'">
-                <p>Lava Cheese Burger</p>
-            </div>
-            <!-- Slide 2 -->
-            <div class="swiper-slide product-slide">
-                <img src="images/smash.jpg" alt="Beef Smash Burger" onerror="this.src='images/hero_burger.png'">
-                <p>Beef Smash Burger</p>
-            </div>
-            <!-- Slide 3 -->
-            <div class="swiper-slide product-slide">
-                <img src="images/grill.jpg" alt="Chicken Grill" onerror="this.src='images/hero_burger.png'">
-                <p>Chicken Grill</p>
-            </div>
-            <!-- Slide 4 -->
-            <div class="swiper-slide product-slide">
-                <img src="images/ayamkrupkrap.jpg" alt="Ayam Goreng" onerror="this.src='images/hero_burger.png'">
-                <p>Ayam Goreng Krup Krap</p>
-            </div>
-            <!-- Slide 5 -->
-            <div class="swiper-slide product-slide">
-                <img src="images/wagyu.jpg" alt="Wagyu Burger" onerror="this.src='images/hero_burger.png'">
-                <p>Wagyu Burger</p>
-            </div>
-        </div>
-        <div class="swiper-pagination"></div>
-        <div class="swiper-button-next"></div>
-        <div class="swiper-button-prev"></div>
+<div class="kitchen-pulse">
+    <span class="pulse-dot"></span>
+    <p style="margin:0; font-weight:bold; letter-spacing:1px;">🔥 LIVE FROM THE GRILL: 12 BEEF SMASHED BURGERS BEING PREPPED. YOUR TURN?</p>
+</div>
+
+<section class="secret-sauce">
+    <div class="content reveal">
+        <h2 style="color: #FF6B00;">The Secret is in the Sizzle.</h2>
+        <p>We don't just flip burgers; we engineer cravings. Our signature lava cheese and 12-hour marinade are why Kangar stays hungry.</p>
     </div>
 </section>
 
-<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-<script>
-    // Initialize Swiper for the inner slider
-    const innerSwiper = new Swiper('.inner-slider', {
-        // Basic settings
-        slidesPerView: 1,        // Mobile default
-        spaceBetween: 20,       
-        loop: true,              
-        centeredSlides: true,
-        autoplay: {
-            delay: 3000,
-            disableOnInteraction: false,
-        },
-        
-        // Navigation and pagination options
-        navigation: {
-            nextEl: '.swiper-button-next',
-            prevEl: '.swiper-button-prev',
-        },
-        pagination: {
-            el: '.swiper-pagination',
-            clickable: true,
-        },
-        breakpoints: {
-            768: { slidesPerView: 2, spaceBetween: 30 },
-            1024: { slidesPerView: 3, spaceBetween: 40 }
-        }
-    });
-</script>
+<div class="divider" style="background: #111;"></div>
+
+<section class="build-burger">
+    <div class="burger-stack reveal">
+        <div class="layer bun-top"></div>
+        <div class="layer cheese"></div>
+        <div class="layer patty-beef"></div>
+        <div class="layer lettuce"></div>
+        <div class="layer bun-bottom"></div>
+    </div>
+    <div class="caption reveal">
+        <h3 style="font-family:'Fraunces', serif; color: white; font-size: 2rem;">0% Frozen. 100% Fresh. Built different.</h3>
+    </div>
+</section>
+
+<div class="divider" style="background: #181818;"></div>
+
+<section class="stats-bar reveal">
+    <div class="stat-col">
+        <h3>10k+</h3>
+        <p>Burgers Smashed</p>
+    </div>
+    <div class="stat-col">
+        <h3>4.9/5</h3>
+        <p>Local Rating</p>
+    </div>
+    <div class="stat-col">
+        <h3>&lt; 20 Mins</h3>
+        <p>Average Kangar Delivery</p>
+    </div>
+</section>
 
 <?php include 'footer.php'; ?>
