@@ -2800,7 +2800,7 @@ try {
                         <div class="form-group"><label>Category</label><select name="category" required>
                                 <option value="burger">Burger</option>
                                 <option value="special">Special</option>
-                                <option value="addon">Add-On</option>
+                                <option value="addon">Add On</option>
                                 <option value="minuman">Minuman</option>
                             </select></div>
                         <div class="form-group" style="grid-column: span 2;"><label>Item Name</label><input type="text"
