@@ -492,6 +492,27 @@ try {
     font-size: 15px;
     color: #fff;
 }
+
+#staff-search {
+    padding: 16px 20px;
+    font-size: 16px;
+    border-radius: 50px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #333;
+    outline: none;
+    width: 100%;
+    transition: 0.2s;
+}
+
+#staff-search::placeholder {
+    color: #999;
+}
+
+#staff-search:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(255, 81, 0, 0.2);
+}
 </style>
 </head>
 <body>
@@ -661,6 +682,13 @@ onkeyup="loadStock()">
 
     <div id="view-staff" class="view-section" style="display:none;">
         <h2 style="margin:0; margin-bottom:20px;">Staff Management</h2>
+
+<div style="display:flex; gap:15px; margin-bottom:20px; background:var(--white); padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+    <input type="text" id="staff-search"
+        placeholder="🔍 Search staff name..."
+        style="flex:2;"
+        onkeyup="loadStaffList()">
+</div>
         <div class="panel-card" style="padding:0; overflow:hidden;">
             <table class="staff-table">
                 <thead>
@@ -1182,20 +1210,24 @@ function loadStaffList() {
         .then(result => {
             container.innerHTML = '';
 
-            const staffList = result.data || [];
+const staffList = result.data || [];
+const search = (document.getElementById('staff-search')?.value || '').toLowerCase();
+const filteredStaff = staffList.filter(staff =>
+    String(staff.name || '').toLowerCase().includes(search)
+);
 
             if (!result.success || !staffList.length) {
                 container.innerHTML = `
                     <tr>
                         <td colspan="4" style="text-align:center; padding:20px;">
-                            No staff found for this branch.
+                           No matching staff found.
                         </td>
                     </tr>
                 `;
                 return;
             }
 
-            staffList.forEach(staff => {
+            filteredStaff.forEach(staff => {
                 const isIn = staff.attendance_status === 'Clock In';
                 const statusText = isIn ? 'Clock In' : 'Clock Out';
                 const statusClass = isIn ? 'status-in' : 'status-out';
@@ -1416,7 +1448,7 @@ function openOrdersPage(navItem) {
 }
 
 window.addEventListener('storage', loadOrders);
-setInterval(loadOrders, 5000);
+setInterval(loadOrders, 2000);
 </script>
 </body>
 </html>

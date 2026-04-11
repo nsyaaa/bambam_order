@@ -65,23 +65,25 @@ try {
 
         $clock_in = new DateTime($log['clock_in']);
         $clock_out = new DateTime();
-        $interval = $clock_in->diff($clock_out);
 
-        $totalMinutes = ($interval->days * 24 * 60) + ($interval->h * 60) + $interval->i;
-        $workHours = ($totalMinutes / 60) - 1;
-        if ($workHours < 0) $workHours = 0;
+        $totalSeconds = $clock_out->getTimestamp() - $clock_in->getTimestamp();
+        if ($totalSeconds < 0) {
+            $totalSeconds = 0;
+        }
+
+        $workHours = round($totalSeconds / 3600, 2);
 
         $update = $pdo->prepare("
             UPDATE attendance_logs
             SET clock_out = NOW(), total_hours = ?, status = 'Completed'
             WHERE id = ?
         ");
-        $update->execute([round($workHours, 2), $log['id']]);
+        $update->execute([$workHours, $log['id']]);
 
         echo json_encode([
             'success' => true,
             'message' => 'Clocked out successfully',
-            'work_hours' => round($workHours, 2)
+            'work_hours' => $workHours
         ]);
     }
 

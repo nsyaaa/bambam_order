@@ -187,6 +187,9 @@ function selectBranch(branch) {
     localStorage.setItem('selected_branch', branch); 
     window.location.href = 'menu.php'; 
 }
+
+
+
 </script>
 
 
