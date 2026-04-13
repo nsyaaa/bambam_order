@@ -402,6 +402,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
                 break;
 
+            case 'update_stock':
+                if (isset($_POST['id'], $_POST['quantity'])) {
+                    try {
+                        $qty = (int) $_POST['quantity'];
+                        $status = $qty == 0 ? 'Out of Stock' : ($qty < 10 ? 'Low Stock' : 'In Stock');
+
+                        $stmt = $pdo->prepare("UPDATE inventory SET quantity = ?, status = ? WHERE id = ?");
+                        $stmt->execute([$qty, $status, $_POST['id']]);
+
+                        $message = "Stock updated!";
+                    } catch (PDOException $e) {
+                        $message = "Error: " . $e->getMessage();
+                    }
+                }
+                break;
+
             case 'toggle_store':
                 $newStatus = isset($_POST['status']) ? 'open' : 'closed';
                 $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES ('global_store_status', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
