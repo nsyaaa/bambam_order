@@ -24,6 +24,10 @@ addColumn($pdo, 'orders', 'customer_phone', "VARCHAR(20) DEFAULT NULL AFTER cust
 addColumn($pdo, 'orders', 'receipt_img', "VARCHAR(255) DEFAULT NULL");
 addColumn($pdo, 'orders', 'payment_status', "VARCHAR(20) DEFAULT 'Pending'");
 addColumn($pdo, 'orders', 'paid_at', "TIMESTAMP NULL DEFAULT NULL");
+addColumn($pdo, 'orders', 'gateway_reference', "VARCHAR(100) DEFAULT NULL");
+addColumn($pdo, 'orders', 'gateway_status', "VARCHAR(50) DEFAULT NULL");
+addColumn($pdo, 'orders', 'payment_channel', "VARCHAR(50) DEFAULT NULL");
+addColumn($pdo, 'orders', 'payment_reject_reason', "VARCHAR(255) DEFAULT NULL");
 addColumn($pdo, 'order_items', 'protein', "VARCHAR(50) DEFAULT NULL AFTER item_name");
 addColumn($pdo, 'order_items', 'customization', "TEXT DEFAULT NULL");
 addColumn($pdo, 'menu_items', 'has_protein', "TINYINT(1) DEFAULT 0");

@@ -16,6 +16,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_received'], $
     exit;
 }
 
+// Handle Customer Cancel Order (only before staff accepts/prepares)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_order'], $_POST['order_id'])) {
+    $orderId = (int) $_POST['order_id'];
+
+    // Re-check current status from DB for safety
+    $stmt = $pdo->prepare("SELECT status FROM orders WHERE id = ?");
+    $stmt->execute([$orderId]);
+    $existingOrder = $stmt->fetch();
+
+    if ($existingOrder) {
+        $currentStatus = strtolower(trim($existingOrder['status']));
+
+        // Allow cancel only before staff starts processing
+        $cancelAllowedStatuses = ['pending', 'placed', 'confirmed'];
+
+        if (in_array($currentStatus, $cancelAllowedStatuses)) {
+            $stmt = $pdo->prepare("UPDATE orders SET status = 'Cancelled' WHERE id = ?");
+            $stmt->execute([$orderId]);
+
+            if (isset($_POST['ajax'])) {
+                echo json_encode(['success' => true, 'message' => 'Order cancelled successfully']);
+                exit;
+            }
+
+            header("Location: receipt.php?id=" . $orderId . "&cancelled=1");
+            exit;
+        } else {
+            if (isset($_POST['ajax'])) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Order can no longer be cancelled because staff has started processing it.'
+                ]);
+                exit;
+            }
+        }
+    }
+
+    if (isset($_POST['ajax'])) {
+        echo json_encode(['success' => false, 'message' => 'Order not found.']);
+        exit;
+    }
+}
+
 // Handle Rating Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_rating'], $_POST['order_id'])) {
     // Auto-create columns if they don't exist
@@ -55,6 +98,7 @@ include 'header.php'; // Ensures your navbar stays at the top
 // 1. DATABASE LOGIC: Get Order Status
 $order_id = $_GET['id'] ?? 0;
 $raw_status = 'pending'; // Default starting point
+$cancelAllowed = false;
 
 if ($order_id) {
     $stmt = $pdo->prepare("
@@ -69,6 +113,8 @@ if ($order_id) {
         $raw_status = strtolower($order['status']);
         $isDelivery = isset($order['order_type']) && strtolower($order['order_type']) === 'delivery';
         $isPaid = isset($order['payment_status']) && $order['payment_status'] === 'Paid';
+
+        $cancelAllowed = in_array($raw_status, ['pending', 'placed', 'confirmed']);
 
         // Fetch Order Items
         $stmtItems = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
@@ -95,7 +141,9 @@ $status_map = [
     'shipped' => 'delivery',
     'completed' => 'delivered',
     'served' => 'delivered',
-    'delivered' => 'delivered'
+    'delivered' => 'delivered',
+    'cancelled' => 'cancelled',
+    'payment rejected' => 'rejected'
 ];
 
 $status = $status_map[$raw_status] ?? 'placed';
@@ -128,6 +176,20 @@ $stages = [
         'desc' => $isDelivery ? 'Your delicious order has arrived. Makan time!' : 'Thank you for your order!',
         'image' => 'images/t1.png',
         'fallback' => '✅'
+    ],
+    'cancelled' => [
+        'percent' => '100%',
+        'title' => 'ORDER CANCELLED',
+        'desc' => 'Your order was cancelled before staff accepted it.',
+        'image' => 'images/order_cancelled.png',
+        'fallback' => '❌'
+    ],
+    'rejected' => [
+        'percent' => '25%',
+        'title' => 'PAYMENT REJECTED',
+        'desc' => 'There was an issue with your receipt upload.',
+        'image' => 'images/order_cancelled.png',
+        'fallback' => '⚠️'
     ]
 ];
 
@@ -463,6 +525,30 @@ $current = $stages[$status] ?? $stages['placed'];
         letter-spacing: 1px;
     }
 
+    .btn-cancel {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 1rem;
+        font-weight: bold;
+        border-radius: 50px;
+        cursor: pointer;
+        box-shadow: 0 10px 20px rgba(231, 76, 60, 0.35);
+        transition: transform 0.2s, box-shadow 0.2s;
+        margin-top: 15px;
+        margin-bottom: 10px;
+        width: 100%;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .btn-cancel:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 25px rgba(231, 76, 60, 0.5);
+        background: #c0392b;
+    }
+
     .btn-confirm:hover {
         transform: translateY(-3px);
         box-shadow: 0 15px 25px rgba(46, 204, 113, 0.6);
@@ -744,6 +830,28 @@ $current = $stages[$status] ?? $stages['placed'];
                     ✅ Order Received / Picked Up
                 </button>
 
+                <?php if ($raw_status === 'payment rejected'): ?>
+                    <div style="background: #fff5f5; border: 1px solid #feb2b2; padding: 15px; border-radius: 10px; margin-top: 15px; color: #c53030; text-align: center;">
+                        <p style="margin: 0; font-weight: bold; font-size: 1.1rem;">Payment Rejected</p>
+                        <p style="margin: 5px 0; font-size: 0.9rem;"><strong>Reason:</strong> <?php echo htmlspecialchars($order['payment_reject_reason'] ?? 'The uploaded image is not a valid payment receipt.'); ?></p>
+                        <p style="margin: 10px 0; font-size: 0.85rem; color: #666;">Action: Please upload a correct receipt to continue processing your order.</p>
+                        
+                        <form action="reupload_receipt.php" method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="order_id" value="<?php echo $order_id; ?>">
+                            <input type="file" name="payment_proof" accept="image/*" required style="font-size: 0.8rem; margin-bottom: 15px; width: 100%;">
+                            <button type="submit" class="btn-confirm" style="margin: 0; width: 100%;">
+                                📤 Re-upload Receipt
+                            </button>
+                        </form>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($cancelAllowed): ?>
+                    <button type="button" onclick="cancelOrder()" class="btn-cancel" id="btn-cancel-order">
+                        ❌ Cancel Order
+                    </button>
+                <?php endif; ?>
+
                 <button onclick="window.print()" class="print-btn">🖨️ Print Receipt</button>
             </div>
         <?php endif; ?>
@@ -758,7 +866,6 @@ $current = $stages[$status] ?? $stages['placed'];
             <h3 style="margin:0 0 10px 0; color:#ff5100;">Rate Your Meal! ⭐</h3>
             <p style="font-size:0.9rem; color:#666;">How was your Bambam Burger?</p>
 
-            <form nput type="hidden" name="order_id" value="<?php echo $order_id; ?>">
             <form id="reviewForm">
                 <input type="hidden" name="order_id" value="<?php echo $order_id; ?>">
                 <input type="hidden" name="submit_rating" value="1">
@@ -899,6 +1006,42 @@ $current = $stages[$status] ?? $stages['placed'];
 
     // Poll every 3 seconds for real-time feel
     setInterval(updateTracker, 3000);
+
+    function cancelOrder() {
+        if (!confirm("Are you sure you want to cancel this order?")) {
+            return;
+        }
+
+        const btn = document.getElementById('btn-cancel-order');
+        btn.innerText = "Cancelling...";
+        btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('cancel_order', '1');
+        formData.append('order_id', orderId);
+        formData.append('ajax', '1');
+
+        fetch('receipt.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message || 'Unable to cancel order.');
+                btn.innerText = "❌ Cancel Order";
+                btn.disabled = false;
+            }
+        })
+        .catch(() => {
+            alert('Something went wrong while cancelling the order.');
+            btn.innerText = "❌ Cancel Order";
+            btn.disabled = false;
+        });
+    }
 
     // CONFETTI & CONFIRMATION LOGIC
     function confirmOrder() {

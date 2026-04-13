@@ -383,9 +383,21 @@ include 'header.php';
             <div class="branch-option" onclick="openMap('Beseri')">BamBam Burger Beseri</div>
         </div>
 
+        <a href="address.php" class="menu-item">
+            <i class="fas fa-map-pin menu-icon"></i>
+            <span class="menu-text"><?php echo $t['delivery_address'] ?? 'Delivery Address'; ?></span>
+            <i class="fas fa-chevron-right menu-arrow"></i>
+        </a>
+
         <a href="history.php" class="menu-item">
             <i class="fas fa-history menu-icon"></i>
             <span class="menu-text"><?php echo $t['history']; ?></span>
+            <i class="fas fa-chevron-right menu-arrow"></i>
+        </a>
+
+        <a href="payment_methods.php" class="menu-item">
+            <i class="fas fa-credit-card menu-icon"></i>
+            <span class="menu-text"><?php echo $t['payment_method'] ?? 'Payment Method'; ?></span>
             <i class="fas fa-chevron-right menu-arrow"></i>
         </a>
     </div>
