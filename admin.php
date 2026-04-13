@@ -171,6 +171,36 @@ if (isset($_SESSION['admin_msg'])) {
     unset($_SESSION['admin_msg']);
 }
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (isset($_POST['action']) && $_POST['action'] === 'fetch_chart_data') {
+        header('Content-Type: application/json');
+
+        $period = $_POST['period'] ?? 'week';
+        $labels = [];
+        $data = [];
+
+        if ($period === 'day') {
+            $stmt = $pdo->prepare("
+                SELECT HOUR(created_at) as label, SUM(total_amount) as total
+                FROM orders
+                WHERE status IN ('Served', 'Completed')
+                AND DATE(created_at) = CURDATE()
+                GROUP BY HOUR(created_at)
+            ");
+            $stmt->execute();
+
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $labels[] = $row['label'] . ':00';
+                $data[] = (float) $row['total'];
+            }
+        }
+
+        echo json_encode([
+            'labels' => $labels,
+            'data' => $data
+        ]);
+        exit; // 🔥 WAJIB ADA
+    }
+
     $message = '';
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
