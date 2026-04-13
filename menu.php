@@ -468,6 +468,14 @@ if (isset($_SESSION['user_id'])) {
                 if ($lowerName === 'nugget tempura') $imgFilename = 'nug.jpg';
                 if ($lowerName === 'cheezy wedges') $imgFilename = 'wedgesss.jpg';
                 if ($lowerName === 'ayam popcorn') $imgFilename = 'pop.jpg';
+                if ($lowerName === 'teh o laici') $imgFilename = 'laici.png';
+                if ($lowerName === 'limau asam boi') $imgFilename = 'asam.jpg';
+                if ($lowerName === 'sirap bandung') $imgFilename = 'bandung.jpg';
+                if ($lowerName === 'sirap limau') $imgFilename = 'sirap.png';
+                if ($lowerName === 'oren sunquick') $imgFilename = 'oren.jpg';
+                if ($lowerName === 'extrajoss susu') $imgFilename = 'extra.jpg';
+                if ($lowerName === 'extrajoss') $imgFilename = 'joss.jpg';
+                if ($lowerName === 'sirap') $imgFilename = 'rose.jpg';
                 ?>
                 <div class="menu-card <?php echo $cat; ?>">
                     <img src="images/<?php echo $imgFilename; ?>" 

@@ -324,19 +324,48 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             case 'update_menu_item':
                 if (isset($_POST['item_id'], $_POST['name'], $_POST['category'], $_POST['price'])) {
                     try {
-                        // Handle Variants
                         $variantsData = [];
                         if (isset($_POST['variant_name']) && is_array($_POST['variant_name'])) {
                             foreach ($_POST['variant_name'] as $idx => $vname) {
                                 if (!empty(trim($vname))) {
-                                    $variantsData[] = ['name' => trim($vname), 'price' => (float) ($_POST['variant_price'][$idx] ?? 0)];
+                                    $variantsData[] = [
+                                        'name' => trim($vname),
+                                        'price' => (float)($_POST['variant_price'][$idx] ?? 0)
+                                    ];
                                 }
                             }
                         }
                         $variants = !empty($variantsData) ? json_encode($variantsData) : null;
 
-                        $stmt = $pdo->prepare("UPDATE menu_items SET category = ?, name = ?, description = ?, price = ?, cost_price = ?, has_protein = ?, variants = ? WHERE id = ?");
-                        $stmt->execute([$_POST['category'], $_POST['name'], $_POST['description'], $_POST['price'], $_POST['cost_price'] ?? 0, isset($_POST['has_protein']) ? 1 : 0, $variants, $_POST['item_id']]);
+                        $imageSql = "";
+                        $params = [
+                            $_POST['category'],
+                            $_POST['name'],
+                            $_POST['description'],
+                            $_POST['price'],
+                            $_POST['cost_price'] ?? 0,
+                            isset($_POST['has_protein']) ? 1 : 0,
+                            $variants
+                        ];
+
+                        if (isset($_FILES['item_image']) && $_FILES['item_image']['error'] === 0) {
+                            $ext = strtolower(pathinfo($_FILES['item_image']['name'], PATHINFO_EXTENSION));
+                            $image_name = time() . '_' . uniqid() . '.' . $ext;
+                            move_uploaded_file($_FILES['item_image']['tmp_name'], 'uploads/menu/' . $image_name);
+                            $imageSql = ", image = ?";
+                            $params[] = $image_name;
+                        }
+
+                        $params[] = $_POST['item_id'];
+
+                        $stmt = $pdo->prepare("
+                            UPDATE menu_items
+                            SET category = ?, name = ?, description = ?, price = ?, cost_price = ?, has_protein = ?, variants = ?
+                            $imageSql
+                            WHERE id = ?
+                        ");
+                        $stmt->execute($params);
+
                         $message = "Menu item updated!";
                     } catch (Exception $e) {
                         $message = "Error: " . $e->getMessage();
@@ -670,11 +699,7 @@ try {
     $activityLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
-    // Fetch Store Status
-    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
-    $storeStatus = $stmt->fetchColumn() ?: 'open';
-
-    // STEP 2: Fetch Global Store Status
+    // Fetch Global Store Status
     $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
     $storeStatus = trim(strtolower($stmt->fetchColumn() ?: 'open'));
 
@@ -1270,6 +1295,29 @@ try {
         }
 
         /* STATUS BADGES */
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #cbd5e0;
+            border-radius: 10px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .btn-ghost:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+
+        .btn-ghost.delete:hover {
+            background: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.35);
+        }
+
         .status-badge {
             padding: 4px 12px;
             border-radius: 9999px;
@@ -1875,9 +1923,15 @@ try {
         .menu-card-img {
             height: 160px;
             background-color: #1d1a2f;
-            background-size: cover;
-            background-position: center;
             position: relative;
+            overflow: hidden;
+        }
+
+        .menu-card-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
 
         .menu-card-img .category-badge {
@@ -2914,31 +2968,65 @@ try {
                         <?php foreach ($adminMenuItems as $item):
                             $itemJson = htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8');
                             $isAvailable = (int) $item['is_available'] === 1;
+
                             $profitMargin = 0;
-                            if ((float) $item['price'] > 0) {
-                                $profitMargin = (((float) $item['price'] - (float) $item['cost_price']) / (float) $item['price']) * 100;
+                            if ((float)$item['price'] > 0) {
+                                $profitMargin = (((float)$item['price'] - (float)$item['cost_price']) / (float)$item['price']) * 100;
                             }
-                            $lowerName = strtolower($item['name']);
+
+                            $lowerName = strtolower(trim($item['name']));
                             $imgFilename = str_replace(' ', '', $lowerName) . '.png';
-                            if ($lowerName === 'ayam goreng krup krap')
-                                $imgFilename = 'ayamkrupkrap.jpg';
-                            if ($lowerName === 'burger mix xl')
-                                $imgFilename = 'xl.jpg';
-                            if ($lowerName === 'lava cheese burger')
-                                $imgFilename = 'lavacheese.jpg';
-                            if ($lowerName === 'chicken grill burger')
-                                $imgFilename = 'grill.jpg';
-                            if ($lowerName === 'beef smash burger')
-                                $imgFilename = 'smash.jpg';
-                            if ($lowerName === 'wagyu burger')
-                                $imgFilename = 'wagyu.jpg';
-                            if ($lowerName === 'burger sate ayam')
-                                $imgFilename = 'sate.jpg';
-                            $imagePath = !empty($item['image']) ? "uploads/menu/" . $item['image'] : "images/{$imgFilename}";
+
+                            // Match menu.php mapping
+                            if ($lowerName === 'ayam goreng krup krap') $imgFilename = 'ayamkrupkrap.jpg';
+                            if ($lowerName === 'burger mix xl') $imgFilename = 'xl.jpg';
+                            if ($lowerName === 'lava cheese burger') $imgFilename = 'lavacheese.jpg';
+                            if ($lowerName === 'cheese steak') $imgFilename = 'cheesesteak.jpg';
+                            if ($lowerName === 'chicken grill burger') $imgFilename = 'grill.jpg';
+                            if ($lowerName === 'hawaiian spicy') $imgFilename = 'hawaii.jpg';
+                            if ($lowerName === 'burger kambing') $imgFilename = 'kambing.jpg';
+                            if ($lowerName === 'burger sate ayam') $imgFilename = 'sate.jpg';
+                            if ($lowerName === 'smash burger' || $lowerName === 'beef smash burger') $imgFilename = 'smash.jpg';
+                            if ($lowerName === 'mozzarella cheese') $imgFilename = 'mozz.jpg';
+                            if ($lowerName === 'telur') $imgFilename = 'egg.jpg';
+                            if ($lowerName === 'cheddar cheese') $imgFilename = 'cheddar.jpg';
+                            if ($lowerName === 'green tea') $imgFilename = 'green.jpg';
+                            if ($lowerName === 'chocolate') $imgFilename = 'milo.jpg';
+                            if ($lowerName === 'indocafe') $imgFilename = 'kopi.jpg';
+                            if ($lowerName === 'teh') $imgFilename = 'tea.jpg';
+                            if ($lowerName === 'kopi') $imgFilename = 'black.jpg';
+                            if ($lowerName === 'jus buah') $imgFilename = 'oren.jpg';
+                            if ($lowerName === 'teh o limau') $imgFilename = 'limau.jpg';
+                            if ($lowerName === 'minuman bergas') $imgFilename = 'aw.jpg';
+                            if ($lowerName === 'burger wagyu' || $lowerName === 'wagyu burger') $imgFilename = 'wagyu.jpg';
+                            if ($lowerName === 'burger itik' || $lowerName === 'itik burger') $imgFilename = 'itik.jpg';
+                            if ($lowerName === 'nugget tempura') $imgFilename = 'nug.jpg';
+                            if ($lowerName === 'cheezy wedges') $imgFilename = 'wedgesss.jpg';
+                            if ($lowerName === 'ayam popcorn') $imgFilename = 'pop.jpg';
+                            if ($lowerName === 'teh o laici') $imgFilename = 'laici.png';
+                            if ($lowerName === 'limau asam boi') $imgFilename = 'asam.jpg';
+                            if ($lowerName === 'sirap bandung') $imgFilename = 'bandung.jpg';
+                            if ($lowerName === 'sirap limau') $imgFilename = 'sirap.png';
+                            if ($lowerName === 'oren sunquick') $imgFilename = 'oren.jpg';
+                            if ($lowerName === 'extrajoss susu') $imgFilename = 'extra.jpg';
+                            if ($lowerName === 'extrajoss') $imgFilename = 'joss.jpg';
+                            if ($lowerName === 'sirap') $imgFilename = 'rose.jpg';
+
+
+                            // Prefer uploaded DB image if exists
+                            $cardImage = 'images/' . $imgFilename;
+                            if (!empty($item['image']) && file_exists(__DIR__ . '/uploads/menu/' . $item['image'])) {
+                                $cardImage = 'uploads/menu/' . $item['image'];
+                            }
                             ?>
                             <div class="menu-card <?php echo !$isAvailable ? 'sold-out' : ''; ?>"
-                                data-category="<?php echo htmlspecialchars($item['category']); ?>">
-                                <div class="menu-card-img" style="background-image: url('<?php echo $imagePath; ?>');">
+                                 data-category="<?php echo htmlspecialchars($item['category']); ?>">
+
+                                <div class="menu-card-img">
+                                    <img src="<?php echo htmlspecialchars($cardImage); ?>"
+                                         alt="<?php echo htmlspecialchars($item['name']); ?>"
+                                         style="width:100%; height:100%; object-fit:cover; display:block;"
+                                         onerror="this.src='images/hero_burger.png'">
                                     <span class="category-badge"><?php echo ucfirst($item['category']); ?></span>
                                     <?php if (in_array($item['name'], $bestSellers)): ?>
                                         <span class="bestseller-badge"><i class="fas fa-star"></i> Best Seller</span>
@@ -3270,7 +3358,11 @@ try {
                                 <i class="fas fa-phone-alt"></i> Call
                             </a>
                             <button type="button" class="btn-edit"
-                                onclick="openBranchModal(<?php echo $branch['id']; ?>, '<?php echo addslashes($branch['name']); ?>', '<?php echo addslashes($branch['phone']); ?>')">
+                                onclick='openBranchModal(
+                                    <?php echo (int)$branch["id"]; ?>,
+                                    <?php echo json_encode($branch["name"]); ?>,
+                                    <?php echo json_encode($branch["phone"]); ?>
+                                )'>
                                 Edit
                             </button>
                         </div>
@@ -3282,55 +3374,6 @@ try {
         </div>
     </div>
 </div>
-
-<div id="branchModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center;">
-    <div style="background:#1a1a1a; width:350px; padding:25px; border-radius:15px; border:1px solid #ff6600; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-        <h3 style="color:white; margin-top:0;">Edit Branch Details</h3>
-        <form method="POST" action="admin.php">
-            <input type="hidden" name="action" value="update_branch">
-            <input type="hidden" name="branch_id" id="modal_branch_id">
-            
-            <div style="margin-bottom:15px;">
-                <label style="color:#a0aec0; font-size:12px;">Branch Name</label>
-                <input type="text" name="name" id="modal_branch_name" required 
-                       style="width:100%; padding:10px; background:#2d2d2d; border:1px solid #444; border-radius:6px; color:white; margin-top:5px;">
-            </div>
-            
-            <div style="margin-bottom:20px;">
-                <label style="color:#a0aec0; font-size:12px;">Phone Number</label>
-                <input type="text" name="phone" id="modal_branch_phone" required 
-                       style="width:100%; padding:10px; background:#2d2d2d; border:1px solid #444; border-radius:6px; color:white; margin-top:5px;">
-            </div>
-            
-            <div style="display:flex; gap:10px;">
-                <button type="submit" class="btn-edit" style="flex:2; padding:12px;">Save Changes</button>
-                <button type="button" onclick="closeBranchModal()" style="flex:1; background:none; border:1px solid #444; color:white; border-radius:6px; cursor:pointer;">Cancel</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-// Function untuk masukkan data ke dalam modal dan tunjukkan modal
-function openBranchModal(id, name, phone) {
-    document.getElementById('modal_branch_id').value = id;
-    document.getElementById('modal_branch_name').value = name;
-    document.getElementById('modal_branch_phone').value = phone;
-    document.getElementById('branchModal').style.display = 'flex';
-}
-
-function closeBranchModal() {
-    document.getElementById('branchModal').style.display = 'none';
-}
-
-// Tutup modal kalau user klik luar dari kotak modal
-window.onclick = function(event) {
-    let modal = document.getElementById('branchModal');
-    if (event.target == modal) {
-        closeBranchModal();
-    }
-}
-</script>
 
 <style>
     /* Pakai style asal kau cuma aku kemaskan sikit grid dia */
@@ -3486,36 +3529,6 @@ window.onclick = function(event) {
             <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
             <script>
                 $(document).ready(function () {
-                    // Logic untuk Branch Toggle
-                    $('.branch-toggle').on('change', function () {
-                        let isChecked = $(this).is(':checked');
-                        let branch = $(this).data('branch');
-                        let status = isChecked ? 'open' : 'closed';
-                        let card = $(this).closest('.branch-card');
-
-                        // Tukar border warna hijau secara dinamik
-                        if (isChecked) {
-                            card.addClass('active-border');
-                        } else {
-                            card.removeClass('active-border');
-                        }
-
-                        console.log("Update " + branch + " status to " + status);
-
-                        // Masukkan code AJAX kat sini nanti
-                    });
-
-                    // Logic untuk Global Store Toggle
-                    $('#store-toggle').on('change', function () {
-                        let status = $(this).is(':checked') ? 'open' : 'closed';
-                        $('#status-label').text('STORE IS ' + status.toUpperCase());
-
-                        if (status === 'open') {
-                            $('#status-label').css('color', '#2ecc71');
-                        } else {
-                            $('#status-label').css('color', '#e74c3c');
-                        }
-                    });
                 });
             </script>
 
@@ -3527,7 +3540,11 @@ window.onclick = function(event) {
         <div class="modal-content">
             <span class="close-btn" onclick="closeEditModal()">&times;</span>
             <h3>Edit Menu Item</h3>
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Update Image</label>
+                    <input type="file" name="item_image" accept=".jpg,.jpeg,.png">
+                </div>
                 <input type="hidden" name="action" value="update_menu_item">
                 <input type="hidden" id="edit-item-id" name="item_id">
                 <div class="form-group"><label>Category</label><select id="edit-item-category" name="category" required>
@@ -3568,6 +3585,7 @@ window.onclick = function(event) {
             <h3>Edit Branch Details</h3>
             <form method="POST">
                 <input type="hidden" name="action" value="update_branch">
+                <input type="hidden" name="view" value="branches">
                 <input type="hidden" id="edit-branch-id" name="branch_id">
                 <div class="form-group">
                     <label>Branch Name</label>
@@ -3618,80 +3636,44 @@ window.onclick = function(event) {
 
     <script>
         function switchView(viewId, element) {
-            // 1. Define title mapping for a professional look
             const titles = {
-                'dashboard': 'Dashboard',
-                'orders': 'Orders',
-                'staff': 'Staff Management',
-                'reviews': 'Customer Reviews',
-                'menu': 'Menu Management',
-                'inventory': 'Inventory',
-                'reports': 'Sales Reports',
-                'branches': 'Our Branches',
-                'settings': 'System Settings'
+                dashboard: 'Dashboard',
+                orders: 'Orders',
+                staff: 'Staff Management',
+                reviews: 'Customer Reviews',
+                menu: 'Menu Management',
+                inventory: 'Inventory',
+                reports: 'Sales Reports',
+                branches: 'Our Branches',
+                settings: 'System Settings'
             };
 
-            // 2. Update Header Title immediately
             const headerTitle = document.querySelector('.top-header h2');
             if (headerTitle && titles[viewId]) {
                 headerTitle.innerText = titles[viewId];
             }
-            function switchView(viewId, element) {
-                // 1. Define title mapping for a professional look
-                const titles = {
-                    'dashboard': 'Dashboard',
-                    'orders': 'Orders',
-                    'staff': 'Staff Management',
-                    'reviews': 'Customer Reviews',
-                    'menu': 'Menu Management',
-                    'inventory': 'Inventory',
-                    'reports': 'Sales Reports',
-                    'branches': 'Our Branches',
-                    'settings': 'System Settings'
-                };
 
-                // 2. Update Header Title immediately
-                const headerTitle = document.querySelector('.top-header h2');
-                if (headerTitle && titles[viewId]) {
-                    headerTitle.innerText = titles[viewId];
-                }
-
-                // 3. Hide notification badge if orders view is selected
-                if (viewId === 'orders') {
-                    const badge = document.querySelector('.sidebar .badge');
-                    if (badge) badge.style.display = 'none';
-                }
-
-                // Hide all views
-                document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-                // Show selected view
-                const targetView = document.getElementById('view-' + viewId);
-                if (targetView) {
-                    targetView.classList.add('active');
-                }
-
-                // Update Sidebar Active State
-                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-                if (element) element.classList.add('active');
-            }
-
-            // 3. Hide notification badge if orders view is selected
             if (viewId === 'orders') {
                 const badge = document.querySelector('.sidebar .badge');
                 if (badge) badge.style.display = 'none';
             }
 
-            // Hide all views
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            // Show selected view
+            document.querySelectorAll('.view-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
             const targetView = document.getElementById('view-' + viewId);
             if (targetView) {
                 targetView.classList.add('active');
             }
 
-            // Update Sidebar Active State
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            if (element) element.classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            if (element) {
+                element.classList.add('active');
+            }
         }
 
         function previewImage(input, previewId) {
