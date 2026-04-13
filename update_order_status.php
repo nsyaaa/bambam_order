@@ -14,6 +14,10 @@ if (isset($data['id'])) {
             $stmt = $pdo->prepare("UPDATE orders SET payment_status = ? WHERE id = ?");
             $stmt->execute([$data['payment_status'], $data['id']]);
         }
+        if (isset($data['payment_reject_reason'])) {
+            $stmt = $pdo->prepare("UPDATE orders SET payment_reject_reason = ? WHERE id = ?");
+            $stmt->execute([$data['payment_reject_reason'], $data['id']]);
+        }
         echo json_encode(['success' => true]);
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);

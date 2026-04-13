@@ -67,8 +67,8 @@ try {
     }
     .sidebar {
         width: 260px;
-        background: #2d2d2d;
-        border-right: 1px solid var(--gray);
+        background: var(--bg-card);
+        border-right: 1px solid var(--border-color);
         display: flex;
         flex-direction: column;
         padding: 20px;
@@ -117,7 +117,7 @@ try {
         justify-content: space-between;
         align-items: center;
         margin-bottom: 30px;
-        background: #ff5100 !important;
+        background: var(--primary) !important;
         color: var(--white);
         padding: 15px 25px;
         border-radius: 15px;
@@ -134,23 +134,47 @@ try {
         gap: 20px;
         margin-bottom: 30px;
     }
-    .stat-card {
-        background: var(--white);
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }
-    .stat-icon {
-        width: 50px; height: 50px;
-        border-radius: 12px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 24px; color: white;
-    }
-    .stat-info h3 { margin: 0; font-size: 28px; color: var(--text-main); }
-    .stat-info p { margin: 0; color: var(--text-muted); font-size: 14px; font-weight: 600; }
+
+.stat-card {
+    background: #1c1c1c;
+    padding: 25px;
+    border-radius: 16px;
+    text-align: center;
+    border: 1px solid #2a2a2a;
+    transition: 0.2s;
+    color: white;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+.stat-card p {
+    font-size: 0.85rem;
+    color: #aaa;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 0;
+}
+
+.stat-card h3 {
+    font-size: 2.2rem;
+    margin: 0;
+    font-weight: 800;
+}
+
+/* Color Accents */
+.stat-card.warning { border-bottom: 3px solid #f1c40f; }
+.stat-card.danger { border-bottom: 3px solid #e74c3c; }
+.stat-card.primary { border-bottom: 3px solid var(--primary); }
+.stat-card.info { border-bottom: 3px solid #3498db; }
+
+.stat-card.warning h3 { color: #f1c40f; }
+.stat-card.danger h3 { color: #e74c3c; }
+.stat-card.primary h3 { color: var(--primary); }
+.stat-card.info h3 { color: #3498db; }
 
     .dashboard-grid {
         display: grid;
@@ -162,8 +186,8 @@ try {
     .orders-section { display: flex; flex-direction: column; gap: 20px; }
     .filters { display: flex; gap: 10px; margin-bottom: 5px; }
     .filter-btn {
-        background: var(--white);
-        border: 1px solid var(--gray);
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
         padding: 10px 25px;
         border-radius: 50px;
         cursor: pointer;
@@ -179,11 +203,11 @@ try {
     }
 
 .order-card {
-    background: var(--white);
+    background: var(--bg-card);
     padding: 25px;
     border-radius: 15px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-    border-left: 6px solid var(--gray);
+    border-left: 6px solid #444;
     position: relative;
     transition: transform 0.2s;
     margin-bottom: 20px;
@@ -210,14 +234,37 @@ try {
 .order-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
+        gap: 12px;
+    }
+
+.btn {
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 14px;
 }
 
-.action-btn {
-    width: 250px;   /* fix size supaya sama */
-    height: 45px;   /* fix tinggi */
+.btn:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
+}
+
+.card, .btn, .stock-fill, .stat-card {
+    transition: all 0.2s ease;
+}
+
+    .action-btn {
+        min-width: 180px;   /* Adjusted for consistency */
+        height: 45px;
     border: none;
-    border-radius: 8px;
+        border-radius: 10px;
     font-weight: 700;
     cursor: pointer;
     color: white;
@@ -252,11 +299,11 @@ try {
         margin-bottom: 30px;
     }
     .branch-card {
-        background: var(--white);
+        background: var(--bg-card);
         padding: 15px;
         border-radius: 10px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        border-top: 4px solid var(--gray);
+        border-top: 4px solid #444;
     }
     .branch-card.open { border-top-color: var(--success); }
     .branch-name { font-weight: 800; color: font-size: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
@@ -298,7 +345,7 @@ try {
 
     .right-panel { display: flex; flex-direction: column; gap: 25px; }
     .panel-card {
-        background: var(--white);
+        background: var(--bg-card);
         padding: 25px;
         border-radius: 15px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.03);
@@ -353,11 +400,56 @@ try {
     .prep-item:last-child { border-bottom: none; }
     .prep-count { font-weight: bold; color: var(--primary); }
 
+    /* STOCK UI UPGRADES */
+    .stock-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .stock-table tr {
+        transition: all 0.2s ease;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .stock-table tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+        transform: scale(1.005);
+    }
+    .stock-table td { padding: 16px !important; }
+
+    .badge {
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        display: inline-block;
+    }
+    .badge.available { background: rgba(46, 204, 113, 0.15); color: #2ecc71; }
+    .badge.low { background: rgba(241, 196, 15, 0.15); color: #f1c40f; }
+    .badge.out { background: rgba(231, 76, 60, 0.15); color: #e74c3c; }
+
+    .stock-bar {
+        width: 100%;
+        height: 6px;
+        background: #222;
+        border-radius: 10px;
+        margin-top: 8px;
+        overflow: hidden;
+    }
+    .stock-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.4s ease;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+
     .staff-table { width: 100%; border-collapse: collapse; }
     .staff-table th, .staff-table td { padding: 12px; text-align: left; border-bottom: 1px solid #444; }
     .staff-status-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
-    .status-in { background: #d4edda; color: #155724; }
-    .status-out { background: #f8d7da; color: #721c24; }
+    .status-in { background: rgba(46, 204, 113, 0.15); color: #2ecc71; }
+    .status-out { background: rgba(231, 76, 60, 0.15); color: #e74c3c; }
 
     @media (max-width: 1200px) {
         .dashboard-grid { grid-template-columns: 1fr; }
@@ -370,12 +462,12 @@ try {
     .close:hover, .close:focus { color: black; text-decoration: none; cursor: pointer; }
 
 #stock-search {
-    padding: 16px 20px;
-    font-size: 16px;
-    border-radius: 50px;
-    border: 1px solid #ddd;
-    background: white;   /* 👉 putih */
-    color: #333;
+    padding: 14px 20px;
+    font-size: 15px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: #222;
+    color: white;
     outline: none;
     width: 100%;
     transition: 0.2s;
@@ -391,11 +483,11 @@ try {
 }
 
 #stock-filter {
-    padding: 14px 18px;
-    border-radius: 50px;  /* 👉 bujur */
-    border: 1px solid #ddd;
-    background: white;
-    color: #333;
+    padding: 12px 18px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: #222;
+    color: white;
     font-weight: 600;
     min-width: 160px;
     outline: none;
@@ -494,12 +586,12 @@ try {
 }
 
 #staff-search {
-    padding: 16px 20px;
-    font-size: 16px;
-    border-radius: 50px;
-    border: 1px solid #ddd;
-    background: white;
-    color: #333;
+    padding: 14px 20px;
+    font-size: 15px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: #222;
+    color: white;
     outline: none;
     width: 100%;
     transition: 0.2s;
@@ -512,6 +604,60 @@ try {
 #staff-search:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(255, 81, 0, 0.2);
+    }
+
+.search-box {
+    background: #1c1c1c;
+    border-radius: 14px;
+    padding: 4px;
+    border: 1px solid #2a2a2a;
+    display: flex;
+    align-items: center;
+}
+
+.search-box input {
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 10px 10px 10px 15px;
+    outline: none;
+    width: 100%;
+}
+
+.table-header {
+    background: #222 !important;
+    border-radius: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.fill-high { background: linear-gradient(90deg, #2ecc71, #27ae60); }
+.fill-low { background: linear-gradient(90deg, #f1c40f, #f39c12); }
+.fill-out { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+
+    .warning-banner {
+        background: rgba(231, 76, 60, 0.1);
+        border: 1px solid var(--danger);
+        color: var(--danger);
+        padding: 12px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        font-weight: 700;
+        display: none;
+        align-items: center;
+        gap: 10px;
+    }
+
+    @media (max-width: 768px) {
+        .stats-grid { grid-template-columns: 1fr; }
+        .dashboard-grid { grid-template-columns: 1fr; }
+        .top-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+        .header-actions { width: 100%; justify-content: space-between; }
+        .sidebar { display: none; }
+        .order-actions { flex-direction: column; }
+        .action-btn { width: 100%; }
+        .stock-stats-grid { grid-template-columns: 1fr; }
+        .filters { overflow-x: auto; white-space: nowrap; padding-bottom: 10px; }
 }
 </style>
 </head>
@@ -528,6 +674,10 @@ try {
 </div>
 
 <div class="main-content">
+    <div id="low-stock-banner" class="warning-banner">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span id="low-stock-msg"></span>
+    </div>
     <header class="top-header">
     <div class="user-info">
         <h2>Welcome, <?php echo htmlspecialchars($branch_name); ?> Branch</h2>
@@ -554,28 +704,30 @@ try {
     <div id="view-dashboard" class="view-section">
         <h3 style="margin-top:0; margin-bottom:15px;">Branch Overview</h3>
         <div id="branch-overview-container" class="branch-overview-grid"></div>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0;">Dashboard Metrics</h3>
+            <div id="last-updated" style="font-size: 12px; color: var(--text-muted);">Last updated: Just now</div>
+        </div>
 
         <div class="stats-grid">
-    <div class="stat-card" onclick="filterOrders('Pending')" style="cursor:pointer;">
-        <div class="stat-icon" style="background: var(--warning);"><i class="fas fa-clock"></i></div>
-        <div class="stat-info"><h3 id="stat-pending">0</h3><p>Pending</p></div>
-    </div>
-
-    <div class="stat-card" onclick="filterOrders('Preparing')" style="cursor:pointer;">
-        <div class="stat-icon" style="background: var(--primary);"><i class="fas fa-fire"></i></div>
-        <div class="stat-info"><h3 id="stat-preparing">0</h3><p>Preparing</p></div>
-    </div>
-
-    <div class="stat-card" onclick="filterOrders('Ready')" style="cursor:pointer;">
-        <div class="stat-icon" style="background: var(--success);"><i class="fas fa-check-circle"></i></div>
-        <div class="stat-info"><h3 id="stat-ready">0</h3><p>Ready</p></div>
-    </div>
-
-    <div class="stat-card" onclick="filterOrders('Served')" style="cursor:pointer;">
-        <div class="stat-icon" style="background: #3498db;"><i class="fas fa-check-double"></i></div>
-        <div class="stat-info"><h3 id="stat-complete">0</h3><p>Complete</p></div>
-    </div>
-</div>
+            <div class="stat-card warning" onclick="filterOrders('Pending')" style="cursor:pointer;">
+                <p>Pending</p>
+                <h3 id="stat-pending">0</h3>
+            </div>
+            <div class="stat-card primary" onclick="filterOrders('Preparing')" style="cursor:pointer;">
+                <p>Preparing</p>
+                <h3 id="stat-preparing">0</h3>
+            </div>
+            <div class="stat-card info" onclick="filterOrders('Ready')" style="cursor:pointer;">
+                <p>Ready</p>
+                <h3 id="stat-ready">0</h3>
+            </div>
+            <div class="stat-card" onclick="filterOrders('Served')" style="cursor:pointer;">
+                <p>Complete</p>
+                <h3 id="stat-complete">0</h3>
+            </div>
+        </div>
 
         <div class="dashboard-grid">
             <div class="orders-section">
@@ -618,8 +770,8 @@ try {
         </div>
         <div style="background:var(--white); padding:20px; border-radius:15px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">
             <table style="width:100%; border-collapse:collapse;">
-                <thead>
-                    <tr style="background:#3d3d3d; text-align:left;">
+                <thead class="table-header">
+                    <tr style="text-align:left;">
     <th style="padding:15px; border-radius:10px 0 0 10px;">ID</th>
     <th style="padding:15px;">Date</th>
     <th style="padding:15px;">Items</th>
@@ -634,15 +786,31 @@ try {
 
     <div id="view-stock" class="view-section" style="display:none;">
         <div style="margin-bottom:20px;">
-    <h2 style="margin:0;">Stock Management</h2>
-</div>
+            <h2 style="margin:0;">Stock Management</h2>
+        </div>
 
-        <div style="display:flex; gap:15px; margin-bottom:20px; background:var(--white); padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-            <input type="text" id="stock-search"
-placeholder="🔍 Search item..."
-style="flex:2;"
-onkeyup="loadStock()">
-            <select id="stock-filter" class="report-filter" style="width:auto; margin:0; min-width:150px;" onchange="loadStock()">
+        <div class="stock-stats-grid">
+            <div class="stat-card">
+                <p>Total Items</p>
+                <h3 id="stock-stat-total">0</h3>
+            </div>
+            <div class="stat-card warning">
+                <p>Low Stock</p>
+                <h3 id="stock-stat-low">0</h3>
+            </div>
+            <div class="stat-card danger">
+                <p>Out of Stock</p>
+                <h3 id="stock-stat-out">0</h3>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:15px; margin-bottom:20px; background:var(--bg-card); padding:10px 20px; border-radius:15px; border: 1px solid var(--border-color); align-items:center;">
+            <div class="search-box" style="flex:2;">
+                <i class="fas fa-search" style="color:#777; margin-left:10px;"></i>
+                <input type="text" id="stock-search"
+                    placeholder="Search item by name..." onkeyup="loadStock()">
+            </div>
+            <select id="stock-filter" onchange="loadStock()">
                 <option value="All">All Status</option>
                 <option value="In Stock">Available</option>
                 <option value="Low Stock">Low Stock</option>
@@ -651,10 +819,10 @@ onkeyup="loadStock()">
         </div>
 
         <div class="panel-card" style="padding:0; overflow:hidden;">
-            <table style="width:100%; border-collapse:collapse;">
-                <thead>
-                    <tr style="background:#3d3d3d; text-align:left; border-bottom:2px solid #444;">
-                        <th style="padding:15px; width:15%;">Item</th>
+            <table class="stock-table" style="width:100%; border-collapse:collapse;">
+                <thead class="table-header">
+                    <tr style="text-align:left; border-bottom:2px solid #444;">
+                        <th style="padding:15px; width:40%;">Item Details</th>
 <th style="padding:15px; width:15%; text-align:center;">Stock Level</th>
 <th style="padding:15px; width:17%; text-align:center;">Status</th>
 <th style="padding:15px; width:25%; text-align:center;">Controls</th>
@@ -668,16 +836,17 @@ onkeyup="loadStock()">
     <div id="view-staff" class="view-section" style="display:none;">
         <h2 style="margin:0; margin-bottom:20px;">Staff Management</h2>
 
-<div style="display:flex; gap:15px; margin-bottom:20px; background:var(--white); padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-    <input type="text" id="staff-search"
-        placeholder="🔍 Search staff name..."
-        style="flex:2;"
-        onkeyup="loadStaffList()">
+<div style="display:flex; gap:15px; margin-bottom:20px; background:var(--white); padding:10px 15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+    <div class="search-box" style="flex:2;">
+        <i class="fas fa-search" style="color:#777; margin-left:10px;"></i>
+        <input type="text" id="staff-search" placeholder="Search staff name..."
+            onkeyup="loadStaffList()">
+    </div>
 </div>
         <div class="panel-card" style="padding:0; overflow:hidden;">
             <table class="staff-table">
-                <thead>
-    <tr style="background:#3d3d3d;">
+                <thead class="table-header">
+    <tr style="">
         <th>Name</th>
         <th>Role</th>
         <th>Status</th>
@@ -727,6 +896,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadOrders();
     updateDashboardStock();
     loadBranchOverview();
+    
+    // Start "Last Updated" clock
+    let lastUpdateSeconds = 0;
+    setInterval(() => {
+        lastUpdateSeconds++;
+        document.getElementById('last-updated').innerText = `Last updated: ${lastUpdateSeconds}s ago`;
+    }, 1000);
 });
 
 function switchView(viewId, navItem) {
@@ -768,6 +944,7 @@ function loadOrders() {
                 notificationSound.play().catch(() => {});
             }
             isFirstLoad = false;
+            lastUpdateSeconds = 0; // Reset last updated counter
 
            allOrders = orders.map(order => {
     return {
@@ -775,7 +952,7 @@ function loadOrders() {
         branch: order.branch || currentBranchFilter,
         orderType: order.order_type,
         payment: order.payment_method,
-        paymentProof: order.receipt_img ? 'uploads/' + order.receipt_img : null,
+        paymentProof: order.receipt_img ? 'uploads/receipts/' + order.receipt_img : null,
         senderName: order.customer_name,
         customerPhone: order.customer_phone,
         timestamp: new Date(order.created_at).getTime(),
@@ -812,6 +989,11 @@ const todayStr =
     if (!order.status) order.status = 'Pending';
 
     if (order.branch !== currentBranchFilter) return;
+
+    if (
+        order.paymentStatus &&
+        order.paymentStatus.toLowerCase() === 'rejected'
+    ) return;
 
     if (order.status === 'Pending') countPending++;
     if (order.status === 'Preparing') countPreparing++;
@@ -982,10 +1164,38 @@ function viewReceipt(id) {
     const modal = document.getElementById('receiptModal');
     const content = document.getElementById('receipt-content-area');
 
+    if (!order.paymentProof) {
+        content.innerHTML = `
+            <p><strong>Sender:</strong> ${order.senderName || '-'}</p>
+            <p style="color:red;">No receipt image found.</p>
+        `;
+        modal.style.display = 'flex';
+        return;
+    }
+
+    const imgPath = order.paymentProof;
     content.innerHTML = `
-        <p><strong>Sender:</strong> ${order.senderName}</p>
-        <img src="${order.paymentProof}" class="receipt-modal-img">
-        <button class="action-btn btn-ready" onclick="confirmPayment(${id})">Confirm Payment</button>
+        <p><strong>Sender:</strong> ${order.senderName || '-'}</p>
+        <p style="font-size:12px;color:#999;">Path: ${imgPath}</p>
+        <img src="${imgPath}" class="receipt-modal-img" 
+             onerror="this.outerHTML='<p style=&quot;color:red;&quot;>❌ Image not found: ${imgPath}</p>';">
+        
+        <div style="margin-bottom: 15px; text-align: left;">
+            <label style="font-size: 13px; color: #666; display: block; margin-bottom: 5px; font-weight: bold;">Rejection Reason (if rejecting):</label>
+            <select id="reject-reason-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; background: white; color: #333;">
+                <option value="Wrong image uploaded">Wrong image uploaded</option>
+                <option value="Image is blurry">Image is blurry</option>
+                <option value="Receipt details not visible">Receipt details not visible</option>
+                <option value="Payment amount does not match">Payment amount does not match</option>
+                <option value="Duplicate / reused receipt">Duplicate / reused receipt</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button class="action-btn btn-ready" style="width:auto; flex:1;" onclick="confirmPayment(${id})">Confirm Payment</button>
+            <button class="action-btn btn-delete" style="width:auto; flex:1;" onclick="rejectOrder(${id})">Reject Order</button>
+        </div>
     `;
     modal.style.display = 'flex';
 }
@@ -999,6 +1209,25 @@ function confirmPayment(id) {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ id: id, payment_status: 'Confirmed' })
+    }).then(() => {
+        closeReceiptModal();
+        loadOrders();
+    });
+}
+
+function rejectOrder(id) {
+    const reason = document.getElementById('reject-reason-select').value;
+    if(!confirm(`Reject this order for reason: "${reason}"?`)) return;
+    
+    fetch('update_order_status.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ 
+            id: id, 
+            status: 'Payment Rejected', 
+            payment_status: 'Rejected', 
+            payment_reject_reason: reason 
+        })
     }).then(() => {
         closeReceiptModal();
         loadOrders();
@@ -1080,14 +1309,35 @@ function loadStock() {
         if (item.level === undefined) item.level = item.status === 'In Stock' ? 50 : (item.status === 'Low Stock' ? 5 : 0);
         return item;
     });
+    
+    // Stats
+    const totalItems = stock.length;
+    const lowCount = stock.filter(i => i.status === 'Low Stock').length;
+    const outCount = stock.filter(i => i.status === 'Out of Stock').length;
+    
+    document.getElementById('stock-stat-total').innerText = totalItems;
+    document.getElementById('stock-stat-low').innerText = lowCount;
+    document.getElementById('stock-stat-out').innerText = outCount;
+    
+    // Low stock banner logic
+    const banner = document.getElementById('low-stock-banner');
+    const totalLow = lowCount + outCount;
+    if (totalLow > 0) {
+        banner.style.display = 'flex';
+        document.getElementById('low-stock-msg').innerText = `${totalLow} items are low or out of stock!`;
+    } else {
+        banner.style.display = 'none';
+    }
 
     const container = document.getElementById('stock-list-container');
-    const search = document.getElementById('stock-search').value.toLowerCase();
-    const filter = document.getElementById('stock-filter').value;
+    const searchInput = document.getElementById('stock-search');
+    const search = searchInput ? searchInput.value.toLowerCase() : '';
+    const filterInput = document.getElementById('stock-filter');
+    const filter = filterInput ? filterInput.value : 'All';
     container.innerHTML = '';
 
     stock.forEach((item, index) => {
-    if (search && !item.name.toLowerCase().includes(search)) return;
+    if (search && !item.name.toLowerCase().replace(/[^\w\s]/gi, '').includes(search.replace(/[^\w\s]/gi, ''))) return;
     if (filter !== 'All' && item.status !== filter) return;
 
     let statusBadge = '';
@@ -1095,23 +1345,29 @@ function loadStock() {
     let mainActionText = '';
     let mainActionOnclick = '';
 
+    let fillWidth = Math.min((item.level / 50) * 100, 100);
+    let fillClass = 'fill-high';
+
     if (item.status === 'In Stock') {
-        statusBadge = '<span class="stock-status stock-ok">✅ Available</span>';
+        statusBadge = '<span class="badge available">✅ Available</span>';
         mainActionClass = 'stock-action-btn stock-action-warning';
         mainActionText = '⚠️ Report Low';
         mainActionOnclick = `setStockStatus(${index}, 'Low Stock')`;
     } 
     else if (item.status === 'Low Stock') {
-        statusBadge = '<span class="stock-status stock-low">⚠️ Low Stock</span>';
+        statusBadge = '<span class="badge low">⚠️ Low Stock</span>';
         mainActionClass = 'stock-action-btn stock-action-danger';
         mainActionText = '❌ Report Out';
         mainActionOnclick = `setStockStatus(${index}, 'Out of Stock')`;
+        fillClass = 'fill-low';
     } 
     else {
-        statusBadge = '<span class="stock-status stock-out">❌ Out of Stock</span>';
+        statusBadge = '<span class="badge out">❌ Out of Stock</span>';
         mainActionClass = 'stock-action-btn stock-action-success';
         mainActionText = '✅ Restock';
         mainActionOnclick = `restockItem(${index})`;
+        fillClass = 'fill-out';
+        fillWidth = 5; // Minimal red bar for visibility
     }
 
     const actionBtn = `
@@ -1120,14 +1376,19 @@ function loadStock() {
                 ${mainActionText}
             </button>
             <button class="stock-action-btn stock-action-edit" onclick="editStockLevel(${index})">
-                ✏️ update
+                ✏️ Update
             </button>
         </div>
     `;
 
     container.innerHTML += `
-    <tr style="border-bottom:1px solid #444;">
-        <td style="padding:18px 15px;" class="stock-item-name">${item.name}</td>
+    <tr>
+        <td style="padding:18px 15px;">
+            <div class="stock-item-name">${item.name}</div>
+            <div class="stock-bar">
+                <div class="stock-fill ${fillClass}" style="width: ${fillWidth}%;"></div>
+            </div>
+        </td>
         <td style="padding:18px 15px;" class="stock-level-cell">${item.level}</td>
         <td style="padding:18px 15px;" class="stock-status-cell">${statusBadge}</td>
         <td style="padding:18px 15px;" class="stock-controls-cell">${actionBtn}</td>
@@ -1163,6 +1424,8 @@ function updateDashboardStock() {
 }
 
 function setStockStatus(index, status) {
+    if(!confirm(`Mark ${status}?`)) return;
+    
     const stock = JSON.parse(localStorage.getItem('bambam_stock')) || defaultStock;
     stock[index].status = status;
     if (status === 'Out of Stock') stock[index].level = 0;
@@ -1448,5 +1711,3 @@ setInterval(loadOrders, 2000);
 </script>
 </body>
 </html>
-
-

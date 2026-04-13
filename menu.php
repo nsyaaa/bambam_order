@@ -57,6 +57,53 @@ if (isset($_SESSION['user_id'])) {
     $favStmt->execute([$_SESSION['user_id']]);
     $user_favorites = $favStmt->fetchAll(PDO::FETCH_COLUMN, 0);
 }
+
+$savedUserData = [
+    'name' => '',
+    'phone' => '',
+    'address' => '',
+    'preferred_payment_method' => 'Cash'
+];
+
+if (isset($_SESSION['user_id'])) {
+    $stmtUserData = $pdo->prepare("
+        SELECT
+            name,
+            phone,
+            address_line1,
+            address_line2,
+            city,
+            postcode,
+            state,
+            delivery_note,
+            preferred_payment_method
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+    ");
+    $stmtUserData->execute([$_SESSION['user_id']]);
+    $dbUser = $stmtUserData->fetch(PDO::FETCH_ASSOC);
+
+    if ($dbUser) {
+        $fullAddressParts = [
+            $dbUser['address_line1'] ?? '',
+            $dbUser['address_line2'] ?? '',
+            $dbUser['city'] ?? '',
+            $dbUser['postcode'] ?? '',
+            $dbUser['state'] ?? ''
+        ];
+        $fullAddressParts = array_filter(array_map('trim', $fullAddressParts));
+        $fullAddress = implode(", ", $fullAddressParts);
+        if (!empty($dbUser['delivery_note'])) { $fullAddress .= "\nNote: " . trim($dbUser['delivery_note']); }
+
+        $savedUserData = [
+            'name' => $dbUser['name'] ?? '',
+            'phone' => $dbUser['phone'] ?? '',
+            'address' => $fullAddress,
+            'preferred_payment_method' => $dbUser['preferred_payment_method'] ?: 'Cash'
+        ];
+    }
+}
 ?>
 
 <style>
@@ -576,10 +623,19 @@ if (isset($_SESSION['user_id'])) {
             </select>
 
             <div id="payment-details" class="hidden">
-                <div id="tng-qr-section" style="background:#222; padding:15px; border-radius:10px; margin-bottom:15px; text-align:center; border: 1px dashed #FFA500;">
-                    <p style="color:#FFA500; margin:0 0 10px 0; font-weight:bold;">Scan to Pay via TnG</p>
-                    <img src="images/tng_qr.png" alt="TnG QR Code" style="width:200px; height:200px; background:white; padding:10px; border-radius:10px; margin-bottom:10px;" onerror="this.src='https://via.placeholder.com/200?text=TnG+QR+Code'">
-                    <p style="font-size:0.8rem; color:#ccc; margin:0;">Bambam Burger Enterprise</p>
+                <div id="tng-qr-section" style="background:#222; padding:20px; border-radius:12px; margin-bottom:15px; text-align:center; border: 1px dashed #FFA500;">
+                    
+                    <p style="color:#FFA500; margin:0 0 15px 0; font-weight:bold; font-size:1.1rem;">
+                        Scan & Pay with TnG
+                    </p>
+
+                    <div style="background:#fff; padding:12px; border-radius:12px; display:inline-block;">
+                        <img src="images/qyla.jpg" alt="TnG QR Code" style="width:220px; height:auto; display:block; border-radius:8px;">
+                    </div>
+
+                    <p style="font-size:0.9rem; color:#ccc; margin-top:15px;">
+                        Please upload your payment receipt after transfer.
+                    </p>
                 </div>
                 <label>Upload Receipt:</label>
                 <input type="file" id="payment-proof" accept="image/*">
@@ -596,6 +652,7 @@ if (isset($_SESSION['user_id'])) {
 <script>
 const menuData = <?php echo json_encode($jsMenuData); ?>;
 const isLoggedIn = <?php echo isset($_SESSION['user_id']) ? 'true' : 'false'; ?>;
+const savedUserData = <?php echo json_encode($savedUserData); ?>;
 const globalStoreStatus = '<?php echo $globalStoreStatus; ?>';
 const branchStatuses = <?php echo json_encode($branchStatuses); ?>;
 let cart = JSON.parse(localStorage.getItem('bambam_cart')) || [];
@@ -802,39 +859,43 @@ function showCheckoutForm() {
     const btn = document.getElementById('btn-checkout-action');
 
     if (form.style.display === 'block') {
-        // Already showing form, so this is the "Place Order" action
         placeOrder();
     } else {
         // Show form
         form.style.display = 'block';
         btn.innerText = "Place Order";
-        // Populate branch display when showing checkout form
+
         const branch = localStorage.getItem('selected_branch') || 'Kangar';
-        // Auto-fill name if logged in
+
         if (isLoggedIn) {
-            let storedName = localStorage.getItem('current_user_name') || '';
-            if (storedName.startsWith('"') && storedName.endsWith('"')) {
-                storedName = storedName.slice(1, -1);
-            }
             const nameInput = document.getElementById('sender-name');
-            nameInput.value = storedName;
+            nameInput.value = savedUserData.name || '';
             nameInput.readOnly = true;
             nameInput.style.backgroundColor = '#555';
             nameInput.style.color = '#aaa';
             document.getElementById('sender-name-container').style.display = 'block';
 
-            // Auto-fill phone if logged in
-            let storedPhone = localStorage.getItem('current_user_phone') || '';
-            if (storedPhone.startsWith('"') && storedPhone.endsWith('"')) {
-                storedPhone = storedPhone.slice(1, -1);
-            }
             const phoneInput = document.getElementById('sender-phone');
-            phoneInput.value = storedPhone;
+            phoneInput.value = savedUserData.phone || '';
+            phoneInput.readOnly = true;
             phoneInput.style.backgroundColor = '#555';
             phoneInput.style.color = '#aaa';
             document.getElementById('sender-phone-container').style.display = 'block';
+
+            const addressInput = document.getElementById('delivery-address');
+            if (addressInput) {
+                addressInput.value = savedUserData.address || '';
+            }
+
+            const paymentSelect = document.getElementById('order-payment');
+            if (paymentSelect && savedUserData.preferred_payment_method) {
+                paymentSelect.value = savedUserData.preferred_payment_method;
+            }
         }
+
         document.getElementById('cart-branch-display').innerText = branch;
+        toggleAddressField();
+        togglePaymentInfo();
     }
 }
 
