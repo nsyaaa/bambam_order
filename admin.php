@@ -3680,9 +3680,6 @@ try {
                         id="edit-item-price" name="price" required></div>
                 <div class="form-group"><label>Cost Price (RM)</label><input type="number" step="0.01"
                         id="edit-item-cost-price" name="cost_price"></div>
-                <div class="form-group" style="justify-content: center;"><label
-                        style="display:flex; align-items:center; gap:10px; margin-top:15px;"><input type="checkbox"
-                            id="edit-item-has_protein" name="has_protein"> Has Protein Option</label></div>
                 <div class="form-group" style="grid-column: span 3;">
                     <label>Variants</label>
                     <div id="edit-variants-container">
@@ -3886,7 +3883,7 @@ try {
             document.getElementById('edit-item-description').value = item.description;
             document.getElementById('edit-item-price').value = item.price;
             document.getElementById('edit-item-cost-price').value = item.cost_price;
-            document.getElementById('edit-item-has_protein').checked = item.has_protein == 1;
+           
 
             const variantsContainer = document.getElementById('edit-variants-container');
             variantsContainer.innerHTML = ''; // Clear previous variants
