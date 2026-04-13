@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 09, 2026 at 08:02 PM
+-- Generation Time: Apr 13, 2026 at 08:03 PM
 -- Server version: 8.4.3
 -- PHP Version: 8.3.28
 
@@ -90,7 +90,18 @@ INSERT INTO `activity_logs` (`id`, `user_id`, `user_name`, `action`, `details`, 
 (47, 1, 'lunaa', 'Create Staff', 'Added staff si to Kangar', '2026-03-31 19:53:54'),
 (48, 1, 'lunaa', 'Create Staff', 'Added staff john to Kangar', '2026-04-01 02:32:08'),
 (49, 1, 'lunaa', 'Create Staff', 'Added staff auni to Kangar', '2026-04-01 02:32:45'),
-(50, 1, 'lunaa', 'Mark Paid', 'Marked Order #74 as paid.', '2026-04-04 14:12:15');
+(50, 1, 'lunaa', 'Mark Paid', 'Marked Order #74 as paid.', '2026-04-04 14:12:15'),
+(51, 1, 'lunaa', 'Create Staff', 'Added staff ain to Arau', '2026-04-10 03:58:04'),
+(52, 1, 'lunaa', 'Delete Staff', 'Deleted Staff ID 11', '2026-04-10 03:58:19'),
+(53, 1, 'lunaa', 'Create Staff', 'Added staff ain to Arau', '2026-04-10 03:58:27'),
+(54, 1, 'lunaa', 'Delete Staff', 'Deleted Staff ID 12', '2026-04-10 03:58:36'),
+(55, 1, 'lunaa', 'Create Staff', 'Added staff ain to Arau', '2026-04-10 03:59:02'),
+(56, 1, 'lunaa', 'Update Order', 'Order #46 -> Completed', '2026-04-10 04:04:56'),
+(57, 1, 'lunaa', 'Create Staff', 'Added staff fayd to Arau', '2026-04-11 16:56:36'),
+(58, 1, 'lunaa', 'Delete Order', 'Deleted Order #112', '2026-04-13 00:51:11'),
+(59, 1, 'lunaa', 'Create Staff', 'Added staff hhh', '2026-04-13 00:51:42'),
+(60, 1, 'lunaa', 'Create Staff', 'Added staff d', '2026-04-13 00:52:15'),
+(61, 1, 'lunaa', 'Delete Stock', 'Deleted Inventory ID 7', '2026-04-13 19:09:58');
 
 -- --------------------------------------------------------
 
@@ -109,6 +120,24 @@ CREATE TABLE `attendance_logs` (
   `status` enum('Active','Completed') DEFAULT 'Active',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `attendance_logs`
+--
+
+INSERT INTO `attendance_logs` (`id`, `staff_id`, `branch_id`, `clock_in`, `clock_out`, `work_date`, `total_hours`, `status`, `created_at`) VALUES
+(1, 13, 2, '2026-04-10 22:22:45', '2026-04-10 22:22:49', '2026-04-10', 6.98, 'Completed', '2026-04-10 14:22:45'),
+(2, 13, 2, '2026-04-11 00:27:10', '2026-04-11 00:27:29', '2026-04-10', 6.98, 'Completed', '2026-04-10 16:27:10'),
+(3, 13, 2, '2026-04-11 02:19:07', NULL, '2026-04-10', 0.00, 'Active', '2026-04-10 18:19:07'),
+(4, 13, 2, '2026-04-12 00:18:05', '2026-04-12 00:19:04', '2026-04-11', 6.98, 'Completed', '2026-04-11 16:18:05'),
+(5, 13, 2, '2026-04-12 00:42:36', '2026-04-12 00:42:49', '2026-04-11', 0.00, 'Completed', '2026-04-11 16:42:36'),
+(6, 16, 2, '2026-04-12 00:58:52', '2026-04-12 00:59:31', '2026-04-11', 0.00, 'Completed', '2026-04-11 16:58:52'),
+(7, 13, 2, '2026-04-12 00:59:08', '2026-04-12 00:59:41', '2026-04-11', 0.00, 'Completed', '2026-04-11 16:59:08'),
+(8, 13, 2, '2026-04-12 01:16:58', '2026-04-12 01:17:20', '2026-04-11', 0.00, 'Completed', '2026-04-11 17:16:58'),
+(9, 16, 2, '2026-04-12 01:17:15', '2026-04-12 01:17:21', '2026-04-11', 0.00, 'Completed', '2026-04-11 17:17:15'),
+(10, 19, 2, '2026-04-13 08:52:24', '2026-04-13 08:52:28', '2026-04-13', 0.00, 'Completed', '2026-04-13 00:52:24'),
+(11, 13, 2, '2026-04-14 00:46:22', '2026-04-14 02:15:21', '2026-04-13', 0.00, 'Completed', '2026-04-13 16:46:22'),
+(12, 13, 2, '2026-04-14 03:27:54', '2026-04-14 03:27:58', '2026-04-13', 0.00, 'Completed', '2026-04-13 19:27:54');
 
 -- --------------------------------------------------------
 
@@ -129,7 +158,7 @@ CREATE TABLE `branches` (
 
 INSERT INTO `branches` (`id`, `name`, `phone`, `is_open`) VALUES
 (1, 'Kangar', '017-590 0799', 0),
-(2, 'Arau', '019-5511765', 0),
+(2, 'Arau', '019-5511765', 1),
 (3, 'Jejawi', '013-777 1763', 1),
 (4, 'Kuala Perlis', '011-1989 8669', 1),
 (5, 'Beseri', '011-1006 4068', 0);
@@ -177,7 +206,43 @@ CREATE TABLE `inventory` (
 --
 
 INSERT INTO `inventory` (`id`, `item_name`, `quantity`, `unit`, `status`, `updated_at`) VALUES
-(1, 'roti', 100, '', 'In Stock', '2026-01-24 02:40:14');
+(1, 'roti', 100, '', 'In Stock', '2026-01-24 02:40:14'),
+(2, 'bun', 50, 'pack', 'In Stock', '2026-04-13 18:53:36'),
+(3, 'patty', 70, 'unit', 'In Stock', '2026-04-13 18:51:40'),
+(4, 'chicken', 70, 'pack', 'In Stock', '2026-04-13 18:52:08'),
+(5, 'cheese', 100, 'pack', 'In Stock', '2026-04-13 18:52:21'),
+(6, 'lettuce', 50, 'pack', 'In Stock', '2026-04-13 18:52:33');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `leave_requests`
+--
+
+CREATE TABLE `leave_requests` (
+  `id` int NOT NULL,
+  `staff_id` int NOT NULL,
+  `leave_type` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `reason` text COLLATE utf8mb4_general_ci,
+  `status` enum('Pending','Approved','Rejected') COLLATE utf8mb4_general_ci DEFAULT 'Pending',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `mc_doc_path` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `attachment` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `leave_requests`
+--
+
+INSERT INTO `leave_requests` (`id`, `staff_id`, `leave_type`, `start_date`, `end_date`, `reason`, `status`, `created_at`, `mc_doc_path`, `attachment`) VALUES
+(1, 1, 'Emergency', '2026-04-08', '2026-04-09', 'urgent', 'Pending', '2026-04-08 09:06:43', NULL, NULL),
+(2, 1, 'Emergency', '2026-04-08', '2026-04-09', 'urgent', 'Pending', '2026-04-08 09:22:40', NULL, NULL),
+(3, 1, 'Emergency', '2026-04-08', '2026-04-09', 'urgent', 'Pending', '2026-04-08 09:37:52', NULL, NULL),
+(4, 1, 'Emergency', '2026-04-08', '2026-04-09', 'urgent', 'Pending', '2026-04-08 09:45:06', NULL, NULL),
+(5, 1, 'Emergency', '2026-04-08', '2026-04-09', 'urgent', 'Pending', '2026-04-08 09:56:32', NULL, NULL),
+(6, 1, 'Unpaid', '2026-04-08', '2026-04-09', 'urgent', 'Pending', '2026-04-08 10:26:33', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -205,15 +270,11 @@ CREATE TABLE `menu_items` (
 
 INSERT INTO `menu_items` (`id`, `category`, `name`, `description`, `price`, `has_protein`, `variants`, `image`, `created_at`, `is_available`, `cost_price`) VALUES
 (1, 'burger', 'Lava Cheese Burger', 'Special lava cheese sauce', 7.00, 1, '[{\"name\": \"Single\", \"price\": 7.0}, {\"name\": \"Double\", \"price\": 13.0}, {\"name\": \"Triple\", \"price\": 19.0}]', NULL, '2026-01-23 23:03:22', 1, 0.00),
-(2, 'burger', 'Burger XL', 'Extra large buns', 5.00, 1, '[{\"name\": \"Single\", \"price\": 5.0}, {\"name\": \"Double\", \"price\": 9.0}, {\"name\": \"Triple\", \"price\": 12.5}]', NULL, '2026-01-23 23:03:22', 1, 0.00),
 (3, 'burger', 'Ayam Goreng Krup Krap', 'Super crispy fried chicken', 8.00, 0, '[{\"name\": \"Single\", \"price\": 8.0}, {\"name\": \"Double\", \"price\": 10.0}, {\"name\": \"Triple\", \"price\": 14.5}]', NULL, '2026-01-23 23:03:22', 1, 0.00),
 (5, 'burger', 'Chicken Grill Burger', 'Flame grilled chicken breast', 8.50, 0, '[{\"name\": \"Single\", \"price\": 8.5}, {\"name\": \"Double\", \"price\": 16.0}, {\"name\": \"Triple\", \"price\": 21.0}]', NULL, '2026-01-23 23:03:22', 1, 0.00),
 (6, 'burger', 'Burger Sate Ayam', 'Sate peanut sauce flavor', 8.50, 0, '[{\"name\": \"Single\", \"price\": 8.5}, {\"name\": \"Double\", \"price\": 16.0}, {\"name\": \"Triple\", \"price\": 21.0}]', NULL, '2026-01-23 23:03:22', 1, 0.00),
 (7, 'burger', 'Smash Burger', 'Crispy beef edges', 7.50, 1, '[{\"name\": \"Single\", \"price\": 7.5}, {\"name\": \"Double\", \"price\": 14.0}, {\"name\": \"Triple\", \"price\": 20.0}]', NULL, '2026-01-23 23:03:22', 1, 0.00),
 (8, 'burger', 'Hawaiian Spicy', 'Pineapple and spice', 8.00, 1, '[{\"name\": \"Single\", \"price\": 8.0}, {\"name\": \"Double\", \"price\": 15.0}, {\"name\": \"Triple\", \"price\": 21.0}]', NULL, '2026-01-23 23:03:22', 1, 0.00),
-(9, 'burger', 'Daging / Ayam Biasa', 'Standard classic burger', 4.50, 1, '[{\"name\": \"Single\", \"price\": 4.5}, {\"name\": \"Double\", \"price\": 7.0}, {\"name\": \"Triple\", \"price\": 10.0}]', NULL, '2026-01-23 23:03:22', 1, 0.00),
-(10, 'burger', 'Sosej Jumbo', 'Large premium sausage', 5.00, 0, '[{\"name\": \"Single\", \"price\": 5.0}, {\"name\": \"Double\", \"price\": 9.0}, {\"name\": \"Triple\", \"price\": 12.0}]', NULL, '2026-01-23 23:03:22', 1, 0.00),
-(11, 'burger', 'Benjo', 'Egg burger specialty', 3.50, 0, '[{\"name\": \"Single\", \"price\": 3.5}, {\"name\": \"Double\", \"price\": 4.5}, {\"name\": \"Triple\", \"price\": 6.0}]', NULL, '2026-01-23 23:03:22', 1, 0.00),
 (12, 'special', 'Cheese Steak', 'Beef strips and cheese', 9.50, 0, NULL, NULL, '2026-01-23 23:03:22', 1, 0.00),
 (13, 'special', 'Burger Kambing', 'New Release Lamb Burger', 13.00, 0, NULL, NULL, '2026-01-23 23:03:22', 1, 0.00),
 (14, 'special', 'Burger Mix XL', 'Combined proteins XL', 8.00, 0, NULL, NULL, '2026-01-23 23:03:22', 1, 0.00),
@@ -275,8 +336,6 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `user_id`, `branch`, `order_type`, `customer_name`, `customer_phone`, `total_amount`, `payment_method`, `payment_status`, `paid_at`, `processed_by_staff_id`, `receipt_img`, `status`, `admin_reply`, `review_is_approved`, `created_at`, `rating`, `review`, `address`) VALUES
-(1, NULL, 'Main', 'Dine-in', 'sya', NULL, 0.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Ready', NULL, 1, '2026-01-23 23:43:23', NULL, NULL, NULL),
-(2, NULL, 'Main', 'Dine-in', 'sya', NULL, 0.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-01-23 23:43:31', NULL, NULL, NULL),
 (3, NULL, 'Main', 'Dine-in', 'sya', NULL, 0.00, 'E-Wallet', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-01-23 23:43:56', NULL, NULL, NULL),
 (4, NULL, 'Main', 'Dine-in', 'sya', NULL, 1.50, 'Cash', 'Pending', NULL, NULL, '1769212239_banner.png', 'Preparing', NULL, 1, '2026-01-23 23:50:39', NULL, NULL, NULL),
 (5, NULL, 'Main', 'Dine-in', 'sya', NULL, 8.00, 'E-Wallet', 'Pending', NULL, NULL, '1769220298_bout.png', 'Served', NULL, 1, '2026-01-24 02:04:58', NULL, NULL, NULL),
@@ -285,7 +344,6 @@ INSERT INTO `orders` (`id`, `user_id`, `branch`, `order_type`, `customer_name`, 
 (8, 7, 'Kangar', 'Take-Away', 'sya', NULL, 9.50, 'Online Transfer', 'Pending', NULL, NULL, '1770347254_bannerabout.png', 'Served', NULL, 1, '2026-02-06 03:07:34', NULL, NULL, NULL),
 (11, 5, 'Kangar', 'Take-Away', 'irfan', NULL, 16.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-02-08 15:23:42', NULL, NULL, NULL),
 (12, 5, 'Kangar', 'Take-Away', 'irfan', NULL, 16.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-02-08 15:23:48', NULL, NULL, NULL),
-(14, 5, 'Kangar', 'Take-Away', 'irfan', NULL, 16.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Ready', NULL, 1, '2026-02-08 15:23:49', NULL, NULL, NULL),
 (15, 5, 'Kangar', 'Take-Away', 'irfan', NULL, 10.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-02-08 15:50:49', NULL, NULL, NULL),
 (16, 5, 'Kangar', 'Take-Away', 'irfan', NULL, 1.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-02-08 15:51:25', NULL, NULL, NULL),
 (17, 5, 'Kangar', 'Take-Away', 'irfan', NULL, 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-02-08 15:53:56', NULL, NULL, NULL),
@@ -296,7 +354,6 @@ INSERT INTO `orders` (`id`, `user_id`, `branch`, `order_type`, `customer_name`, 
 (23, 5, 'Kangar', 'Take-Away', 'jkjl', NULL, 7.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Preparing', NULL, 1, '2026-02-12 20:48:25', NULL, NULL, NULL),
 (24, 5, 'Kangar', 'Take-Away', 'jkjl', NULL, 7.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-02-12 20:48:42', NULL, NULL, NULL),
 (25, 5, 'Kangar', 'Take-Away', 'uiuu', NULL, 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-02-12 20:53:19', NULL, NULL, NULL),
-(26, 5, 'Kangar', 'Take-Away', 'jkjl', NULL, 8.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Ready', NULL, 1, '2026-02-12 20:55:15', NULL, NULL, NULL),
 (27, NULL, 'Kangar', 'Take-Away', 'jkjl', NULL, 1.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-02-13 02:21:49', NULL, NULL, NULL),
 (28, NULL, 'Kangar', 'Pick-Up', 'uiuu', NULL, 17.00, 'Transfer', 'Pending', NULL, NULL, 'receipt_1770949712_698e8c50c0421.jpg', 'Served', NULL, 1, '2026-02-13 02:28:32', NULL, NULL, NULL),
 (29, NULL, 'Kangar', 'Delivery', 'uiuu', NULL, 8.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-02-13 18:22:49', NULL, NULL, NULL),
@@ -308,14 +365,13 @@ INSERT INTO `orders` (`id`, `user_id`, `branch`, `order_type`, `customer_name`, 
 (35, NULL, 'Kuala Perlis', 'Delivery', 'jkjl', NULL, 8.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-02-13 19:24:25', NULL, NULL, NULL),
 (36, NULL, 'Kuala Perlis', 'Delivery', 'irfan', NULL, 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-02-13 19:32:26', NULL, NULL, NULL),
 (37, NULL, 'Kuala Perlis', 'Delivery', 'jkjl', NULL, 2.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-02-13 19:37:33', NULL, NULL, NULL),
-(38, NULL, 'Kuala Perlis', 'Delivery', 'uiuu', NULL, 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Completed', NULL, 1, '2026-02-13 19:49:24', NULL, NULL, NULL),
 (39, 5, 'Kangar', 'Delivery', 'irfan', NULL, 15.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Completed', NULL, 1, '2026-02-14 10:42:23', NULL, NULL, NULL),
 (40, 5, 'Kangar', 'Pick-Up', 'alep', NULL, 7.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-02-19 14:28:12', NULL, NULL, NULL),
 (41, 5, 'Kangar', 'Pick-Up', 'alep', NULL, 7.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-02-19 14:28:22', NULL, NULL, NULL),
 (42, 5, 'Kangar', 'Pick-Up', 'alep', NULL, 7.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-02-19 14:28:23', NULL, NULL, NULL),
 (43, 5, 'Kangar', 'Delivery', 'alep', NULL, 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-02-19 14:41:19', NULL, NULL, NULL),
 (45, NULL, 'Kangar', 'Delivery', 'irfan', NULL, 24.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-02-23 17:18:49', NULL, NULL, NULL),
-(46, NULL, 'Kangar', 'Delivery', 'jkjl', NULL, 34.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Ready', NULL, 1, '2026-02-24 14:57:32', NULL, NULL, NULL),
+(46, NULL, 'Kangar', 'Delivery', 'jkjl', NULL, 34.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Completed', NULL, 1, '2026-02-24 14:57:32', NULL, NULL, NULL),
 (47, NULL, 'Kangar', 'Delivery', 'jkjl', NULL, 34.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-02-24 14:57:36', NULL, NULL, NULL),
 (48, NULL, 'Kangar', 'Delivery', 'jkjl', NULL, 34.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Completed', NULL, 1, '2026-02-24 14:57:37', NULL, NULL, NULL),
 (49, NULL, 'Kangar', 'Delivery', 'jkjl', NULL, 18.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-02-24 15:01:15', NULL, NULL, NULL),
@@ -349,14 +405,43 @@ INSERT INTO `orders` (`id`, `user_id`, `branch`, `order_type`, `customer_name`, 
 (80, 5, 'Jejawi', 'Delivery', 'lunaa', '0162032784', 10.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-04-07 16:51:36', NULL, NULL, 'bfyfyd'),
 (81, 5, 'Jejawi', 'Delivery', 'lunaa', '0162032784', 10.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-04-07 16:51:36', NULL, NULL, 'bfyfyd'),
 (82, 5, 'Jejawi', 'Delivery', 'lunaa', '0162032784', 10.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-04-07 17:05:15', NULL, NULL, 'fjhrfyf'),
-(83, 5, 'Jejawi', 'Delivery', 'lunaa', '0162032784', 10.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-04-07 17:05:22', NULL, NULL, 'fjhrfyf'),
-(84, 5, 'Jejawi', 'Delivery', 'lunaa', '0162032784', 10.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-04-07 17:14:54', NULL, NULL, 'dwedwedeqd'),
-(85, 5, 'Jejawi', 'Delivery', 'lunaa', '0162032784', 10.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-04-07 17:26:16', NULL, NULL, 'guv htgj'),
+(83, 5, 'Jejawi', 'Delivery', 'lunaa', '0162032784', 10.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Preparing', NULL, 1, '2026-04-07 17:05:22', NULL, NULL, 'fjhrfyf'),
+(84, 5, 'Jejawi', 'Delivery', 'lunaa', '0162032784', 10.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-07 17:14:54', NULL, NULL, 'dwedwedeqd'),
+(85, 5, 'Jejawi', 'Delivery', 'lunaa', '0162032784', 10.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-07 17:26:16', NULL, NULL, 'guv htgj'),
 (86, 5, 'Beseri', 'Delivery', 'lunaa', '0162032784', 6.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-04-07 18:05:50', NULL, NULL, 'uyiyli'),
 (87, 5, 'Beseri', 'Delivery', 'lunaa', '0162032784', 5.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-04-07 18:06:34', NULL, NULL, 'ljljk'),
-(89, 5, 'Arau', 'Delivery', 'lunaa', '0162032784', 7.00, 'ToyyibPay', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-04-08 13:06:50', NULL, NULL, 'dfgdg'),
-(90, 5, 'Arau', 'Delivery', 'lunaa', '0162032784', 7.00, 'ToyyibPay', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-04-08 13:53:16', NULL, NULL, 'vxzvx'),
-(91, 5, 'Arau', 'Delivery', 'lunaa', '0162032784', 7.00, 'ToyyibPay', 'Pending', NULL, NULL, NULL, 'Pending', NULL, 1, '2026-04-08 14:03:11', NULL, NULL, 'vxzvx');
+(90, 5, 'Arau', 'Delivery', 'lunaa', '0162032784', 7.00, 'ToyyibPay', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-08 13:53:16', NULL, NULL, 'vxzvx'),
+(92, 11, 'Arau', 'Delivery', 'abel', '0162032784', 28.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 03:17:48', NULL, NULL, 'zz'),
+(93, 11, 'Arau', 'Pick-Up', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 03:19:04', NULL, NULL, NULL),
+(94, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 03:22:21', NULL, NULL, 'xxx'),
+(95, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 03:30:34', NULL, NULL, 'xdd'),
+(96, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 03:41:40', NULL, NULL, 'kjj'),
+(100, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 16:08:19', NULL, NULL, 'sds'),
+(101, 11, 'Arau', 'Delivery', 'abel', '0162032784', 7.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 16:24:56', NULL, NULL, 'sdfbfd'),
+(102, 11, 'Kuala Perlis', 'Delivery', 'abel', '0162032784', 8.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 16:29:25', NULL, NULL, 'fff'),
+(103, 11, 'Jejawi', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 16:44:24', NULL, NULL, 'gddhfgn'),
+(104, 11, 'Jejawi', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 16:45:25', NULL, NULL, 'dsasaxsxda'),
+(105, 11, 'Jejawi', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 16:49:54', NULL, NULL, 'ddd'),
+(106, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 16:50:29', NULL, NULL, 'ss'),
+(108, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 17:00:04', NULL, NULL, 'sss'),
+(109, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 17:13:26', NULL, NULL, 'xsxx'),
+(110, 11, 'Arau', 'Delivery', 'abel', '0162032784', 61.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 17:47:01', NULL, NULL, '44'),
+(111, 11, 'Arau', 'Pick-Up', 'abel', '0162032784', 32.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-10 17:54:21', NULL, NULL, NULL),
+(113, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-13 00:54:34', NULL, NULL, 'sss'),
+(114, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Cancelled', NULL, 1, '2026-04-13 00:54:59', NULL, NULL, 'sss'),
+(117, 11, 'Arau', 'Delivery', 'abel', '0162032784', 7.50, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-13 09:56:20', NULL, NULL, 'sss'),
+(118, 11, 'Arau', 'Delivery', 'abel', '0162032784', 24.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Preparing', NULL, 1, '2026-04-13 09:57:40', NULL, NULL, 'ddddd'),
+(120, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Preparing', NULL, 1, '2026-04-13 10:10:44', NULL, NULL, 'jjj'),
+(121, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-13 14:30:56', NULL, NULL, 'fdfds'),
+(122, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-13 14:39:57', NULL, NULL, 'liukhu'),
+(123, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Cancelled', NULL, 1, '2026-04-13 14:44:12', NULL, NULL, 'liukhu'),
+(124, 11, 'Arau', 'Delivery', 'abel', '0162032784', 5.00, 'TnG', 'Confirmed', NULL, NULL, 'receipt_1776094665_69dd0dc9a0103.png', 'Preparing', NULL, 1, '2026-04-13 15:37:45', NULL, NULL, 'dsg'),
+(125, 11, 'Arau', 'Delivery', 'abel', '0162032784', 5.00, 'TnG', 'Rejected', NULL, NULL, 'receipt_1776095825_69dd12511e984.png', 'Payment Rejected', NULL, 1, '2026-04-13 15:57:05', NULL, NULL, 'dsg'),
+(126, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.50, 'TnG', 'Rejected', NULL, NULL, 'receipt_1776096248_69dd13f823e89.jpg', 'Payment Rejected', NULL, 1, '2026-04-13 16:04:08', NULL, NULL, 'dfdf'),
+(127, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'TnG', 'Confirmed', NULL, NULL, 'receipt_1776098697_69dd1d89b674a.jpg', 'Served', NULL, 1, '2026-04-13 16:44:57', NULL, NULL, 'ccc'),
+(128, 11, 'Arau', 'Delivery', 'abel', '0162032784', 13.00, 'ToyyibPay', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-13 18:24:36', NULL, NULL, 'politeknik tuanku syed sirajuddin, arau, 010000, PERLIS'),
+(129, 11, 'Arau', 'Delivery', 'abel', '0162032784', 29.00, 'Cash', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-13 18:25:11', NULL, NULL, 'politeknik tuanku syed sirajuddin, arau, 010000, PERLIS'),
+(130, 11, 'Arau', 'Delivery', 'abel', '0162032784', 8.00, 'ToyyibPay', 'Pending', NULL, NULL, NULL, 'Served', NULL, 1, '2026-04-13 18:26:34', NULL, NULL, 'politeknik tuanku syed sirajuddin, arau, 010000, PERLIS');
 
 -- --------------------------------------------------------
 
@@ -390,8 +475,6 @@ INSERT INTO `order_items` (`id`, `order_id`, `item_name`, `variant`, `protein`, 
 (8, 11, 'Burger Sate Ayam', 'Single', '', 8.50, 1, NULL),
 (9, 12, 'Ayam Goreng Krup Krap', 'Single', '', 8.00, 1, NULL),
 (10, 12, 'Burger Sate Ayam', 'Single', '', 8.50, 1, NULL),
-(13, 14, 'Ayam Goreng Krup Krap', 'Single', '', 8.00, 1, NULL),
-(14, 14, 'Burger Sate Ayam', 'Single', '', 8.50, 1, NULL),
 (15, 15, 'Ayam Goreng Krup Krap XL', 'Single', '', 10.00, 1, NULL),
 (16, 16, 'Cheddar Cheese', 'Standard', '', 1.50, 1, NULL),
 (17, 17, 'Burger Mix XL', 'Standard', '', 8.00, 1, NULL),
@@ -402,7 +485,6 @@ INSERT INTO `order_items` (`id`, `order_id`, `item_name`, `variant`, `protein`, 
 (22, 23, 'LAVA CHEESE BURGER', 'Single', '', 7.00, 1, ''),
 (23, 24, 'LAVA CHEESE BURGER', 'Single', '', 7.00, 1, ''),
 (24, 25, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
-(25, 26, 'BURGER SATE AYAM', 'Single', '', 8.50, 1, ''),
 (26, 27, 'TELUR', 'Standard', '', 1.50, 1, ''),
 (27, 28, 'CHICKEN GRILL BURGER', 'Single', '', 8.50, 2, ''),
 (28, 29, 'BURGER SATE AYAM', 'Single', '', 8.50, 1, ''),
@@ -416,7 +498,6 @@ INSERT INTO `order_items` (`id`, `order_id`, `item_name`, `variant`, `protein`, 
 (36, 35, 'BURGER SATE AYAM', 'Single', '', 8.50, 1, ''),
 (37, 36, 'BURGER MIX XL', 'Standard', '', 8.00, 1, ''),
 (38, 37, 'KOPI', 'Sejuk', '', 2.50, 1, ''),
-(39, 38, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
 (40, 39, 'TELUR', 'Standard', '', 1.50, 10, ''),
 (41, 40, 'LAVA CHEESE BURGER', 'Single', 'Ayam', 7.00, 1, ''),
 (42, 41, 'LAVA CHEESE BURGER', 'Single', 'Ayam', 7.00, 1, ''),
@@ -483,7 +564,46 @@ INSERT INTO `order_items` (`id`, `order_id`, `item_name`, `variant`, `protein`, 
 (108, 85, 'Custom Burger', 'Custom Build', '', 7.00, 1, 'Lettuce, Beef Patty'),
 (109, 85, 'INDOCAFE', 'Sejuk', '', 3.00, 1, ''),
 (110, 86, 'Custom Burger', 'Custom Build', '', 6.00, 1, 'Tomato, Chicken Patty'),
-(111, 87, 'AYAM POPCORN', 'Standard', '', 5.00, 1, '');
+(111, 87, 'AYAM POPCORN', 'Standard', '', 5.00, 1, ''),
+(112, 92, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(113, 92, 'BURGER WAGYU', 'Standard', '', 20.00, 1, ''),
+(114, 93, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(115, 94, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(116, 95, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(117, 96, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(121, 100, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(122, 101, 'LAVA CHEESE BURGER', 'Single', 'Ayam', 7.00, 1, ''),
+(123, 102, 'CHICKEN GRILL BURGER', 'Single', '', 8.50, 1, ''),
+(124, 103, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(125, 104, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(126, 105, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(127, 106, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(129, 108, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(130, 109, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(131, 110, 'CHICKEN GRILL BURGER', 'Single', '', 8.50, 1, ''),
+(132, 110, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(133, 110, 'BURGER SATE AYAM', 'Single', '', 8.50, 1, ''),
+(134, 110, 'BURGER ITIK', 'Standard', '', 16.00, 1, ''),
+(135, 110, 'BURGER WAGYU', 'Standard', '', 20.00, 1, ''),
+(136, 111, 'CHICKEN GRILL BURGER', 'Single', '', 8.50, 1, ''),
+(137, 111, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(138, 111, 'BURGER ITIK', 'Standard', '', 16.00, 1, ''),
+(142, 113, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(143, 114, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(144, 117, 'SMASH BURGER', 'Single', 'Ayam', 7.50, 1, ''),
+(145, 118, 'BURGER ITIK', 'Standard', '', 16.00, 1, ''),
+(146, 118, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(148, 120, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(149, 121, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(150, 122, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(151, 123, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 1, ''),
+(152, 124, 'AYAM POPCORN', 'Standard', '', 5.00, 1, ''),
+(153, 125, 'AYAM POPCORN', 'Standard', '', 5.00, 1, ''),
+(154, 126, 'BURGER SATE AYAM', 'Single', '', 8.50, 1, ''),
+(155, 127, 'HAWAIIAN SPICY', 'Single', 'Ayam', 8.00, 1, ''),
+(156, 129, 'AYAM POPCORN', 'Standard', '', 5.00, 1, ''),
+(157, 129, 'AYAM GORENG KRUP KRAP', 'Single', '', 8.00, 2, ''),
+(158, 129, 'HAWAIIAN SPICY', 'Single', 'Ayam', 8.00, 1, '');
 
 -- --------------------------------------------------------
 
@@ -508,7 +628,11 @@ CREATE TABLE `staff` (
 INSERT INTO `staff` (`id`, `name`, `email`, `phone`, `role`, `branch`, `created_at`) VALUES
 (8, 'si', 'si@gmail.com', '0162032784', 'kitchen', 'Kangar', '2026-03-31 19:53:54'),
 (9, 'john', 'john@gmail.com', '0162032784', 'kitchen', 'Kangar', '2026-04-01 02:32:08'),
-(10, 'auni', 'auni@gmail.com', '0162032784', 'kitchen', 'Kangar', '2026-04-01 02:32:44');
+(10, 'auni', 'auni@gmail.com', '0162032784', 'kitchen', 'Kangar', '2026-04-01 02:32:44'),
+(13, 'ain', 'ain@gmail.com', '01139364706', 'kitchen', 'Arau', '2026-04-10 03:59:02'),
+(16, 'fayd', 'fayd@gmail.com', '01154685462', 'kitchen', 'Arau', '2026-04-11 16:56:36'),
+(17, 'hhh', 'hhh@gmail.com', '01195486547', 'kitchen', 'Arau', '2026-04-13 00:51:42'),
+(19, 'd', 'd@gmail.com', '0162032784', 'kitchen', 'Arau', '2026-04-13 00:52:15');
 
 -- --------------------------------------------------------
 
@@ -560,22 +684,57 @@ CREATE TABLE `users` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `profile_pic` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `role` varchar(20) COLLATE utf8mb4_general_ci DEFAULT 'user',
-  `last_login` timestamp NULL DEFAULT NULL
+  `last_login` timestamp NULL DEFAULT NULL,
+  `address` text COLLATE utf8mb4_general_ci,
+  `preferred_payment_method` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `preferred_payment` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Cash',
+  `address_line1` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `address_line2` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `city` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `postcode` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `state` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `delivery_note` text COLLATE utf8mb4_general_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `gmail`, `phone`, `password`, `reset_token`, `reset_expire`, `created_at`, `profile_pic`, `role`, `last_login`) VALUES
-(1, 'lunaa', 'admin@bambam.com', '0162032784', '$2y$10$.Cj/Z8hiFnwI6l4oFLvWTex2gBMKP937yfqaYqR8yXZc9LwmnQEuS', 'bf11520b5572464c764faadeb65faf8a', '2026-01-20 19:27:30', '2026-01-19 11:13:25', 'uploads/profile_1_1769165846.jpg', 'admin', '2026-04-08 08:47:52'),
-(2, 'auni', 'auni@gmail.com', '0166300089', '$2y$10$uFJGvQ4.Qqu1TVDZLrclI.ZfDOzs1xddEmEAvsWhkuPXKESFgTkPK', 'e4af24b8b26ddafd479029a6b8272aa4', '2026-01-20 18:47:42', '2026-01-20 18:15:39', NULL, 'user', NULL),
-(3, 'irfan', 'irfan@gmail.com', '01169509870', '$2y$10$vXbxWiWdNw1hsvndOY/ImuG1RyBXAdSq4fQ8odImVXSXTMebJLttG', NULL, NULL, '2026-01-23 09:36:00', NULL, 'user', NULL),
-(5, 'lunaa', 'kiyowosya.my@gmail.com', '0162032784', '$2y$10$E8xINqZtj6u1gwc9lqV1sOt0CETF5CbxKnyO/5zdPFx1PpfhEvNVO', NULL, NULL, '2026-01-23 16:11:55', 'uploads/profile_5_1771511561.jpg', 'user', NULL),
-(6, 'iman', 'iman@gmail.com', '0111111111', '$2y$10$iEVD0fzkq8P1HtGxSLUtgOCH3AMWXHfECsgRpEpWZJ/ahmp5PRL2K', NULL, NULL, '2026-01-24 02:41:27', NULL, 'staff', NULL),
-(7, 'lunaa', 'luna@gmail.com', '0162032784', '$2y$10$8SXJYPlNf8wNU0hyQOF/N.erX0evxLbvsrY28rvemn8WCcoJswigS', NULL, NULL, '2026-02-06 03:04:52', NULL, 'user', NULL),
-(10, 'nini', 'niniz@gmail.com', '0195711302', '$2y$10$qQiMrZK46DK/OeK2Wc/EOufDrK.L7ittEWxf9fmPoC4TLUaWVoyJ2', NULL, NULL, '2026-04-01 08:48:28', NULL, 'user', NULL),
-(11, 'abel', 'admin@gmail.com', '0162032784', '$2y$10$2AfzrczUswzLndC4YyXMK.3jJR2pdm/YuKdz9jHWTsUwqkXKD77aq', NULL, NULL, '2026-04-09 18:22:06', NULL, 'user', NULL);
+INSERT INTO `users` (`id`, `name`, `gmail`, `phone`, `password`, `reset_token`, `reset_expire`, `created_at`, `profile_pic`, `role`, `last_login`, `address`, `preferred_payment_method`, `preferred_payment`, `address_line1`, `address_line2`, `city`, `postcode`, `state`, `delivery_note`) VALUES
+(1, 'lunaa', 'admin@bambam.com', '0162032784', '$2y$10$.Cj/Z8hiFnwI6l4oFLvWTex2gBMKP937yfqaYqR8yXZc9LwmnQEuS', 'bf11520b5572464c764faadeb65faf8a', '2026-01-20 19:27:30', '2026-01-19 11:13:25', 'uploads/profile_1_1769165846.jpg', 'admin', '2026-04-13 09:06:16', NULL, NULL, 'Cash', NULL, NULL, NULL, NULL, NULL, NULL),
+(2, 'auni', 'auni@gmail.com', '0166300089', '$2y$10$uFJGvQ4.Qqu1TVDZLrclI.ZfDOzs1xddEmEAvsWhkuPXKESFgTkPK', 'e4af24b8b26ddafd479029a6b8272aa4', '2026-01-20 18:47:42', '2026-01-20 18:15:39', NULL, 'user', NULL, NULL, NULL, 'Cash', NULL, NULL, NULL, NULL, NULL, NULL),
+(3, 'irfan', 'irfan@gmail.com', '01169509870', '$2y$10$vXbxWiWdNw1hsvndOY/ImuG1RyBXAdSq4fQ8odImVXSXTMebJLttG', NULL, NULL, '2026-01-23 09:36:00', NULL, 'user', NULL, NULL, NULL, 'Cash', NULL, NULL, NULL, NULL, NULL, NULL),
+(5, 'lunaa', 'kiyowosya.my@gmail.com', '0162032784', '$2y$10$E8xINqZtj6u1gwc9lqV1sOt0CETF5CbxKnyO/5zdPFx1PpfhEvNVO', NULL, NULL, '2026-01-23 16:11:55', 'uploads/profile_5_1771511561.jpg', 'user', NULL, NULL, NULL, 'Cash', NULL, NULL, NULL, NULL, NULL, NULL),
+(6, 'iman', 'iman@gmail.com', '0111111111', '$2y$10$iEVD0fzkq8P1HtGxSLUtgOCH3AMWXHfECsgRpEpWZJ/ahmp5PRL2K', NULL, NULL, '2026-01-24 02:41:27', NULL, 'staff', NULL, NULL, NULL, 'Cash', NULL, NULL, NULL, NULL, NULL, NULL),
+(7, 'lunaa', 'luna@gmail.com', '0162032784', '$2y$10$8SXJYPlNf8wNU0hyQOF/N.erX0evxLbvsrY28rvemn8WCcoJswigS', NULL, NULL, '2026-02-06 03:04:52', NULL, 'user', NULL, NULL, NULL, 'Cash', NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 'nini', 'niniz@gmail.com', '0195711302', '$2y$10$qQiMrZK46DK/OeK2Wc/EOufDrK.L7ittEWxf9fmPoC4TLUaWVoyJ2', NULL, NULL, '2026-04-01 08:48:28', NULL, 'user', NULL, NULL, NULL, 'Cash', NULL, NULL, NULL, NULL, NULL, NULL),
+(11, 'abel', 'admin@gmail.com', '0162032784', '$2y$10$2AfzrczUswzLndC4YyXMK.3jJR2pdm/YuKdz9jHWTsUwqkXKD77aq', NULL, NULL, '2026-04-09 18:22:06', 'uploads/profile_11_1776101802.jpg', 'user', NULL, NULL, 'ToyyibPay', 'ToyyibPay', 'politeknik tuanku syed sirajuddin', '', 'arau', '010000', 'PERLIS', '');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_addresses`
+--
+
+CREATE TABLE `user_addresses` (
+  `id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `fullname` varchar(255) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `address_line1` text,
+  `address_line2` text,
+  `city` varchar(100) DEFAULT NULL,
+  `state` varchar(100) DEFAULT NULL,
+  `postcode` varchar(10) DEFAULT NULL,
+  `note` text
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `user_addresses`
+--
+
+INSERT INTO `user_addresses` (`id`, `user_id`, `fullname`, `phone`, `address_line1`, `address_line2`, `city`, `state`, `postcode`, `note`) VALUES
+(1, 11, 'nur qayla isabella bintiagusman', '0162032784', 'politeknik tuanku syed sirajuddin', '', 'arau', 'PERLIS', '010000', 'drop at pickup point');
 
 --
 -- Indexes for dumped tables
@@ -610,6 +769,12 @@ ALTER TABLE `favorites`
 -- Indexes for table `inventory`
 --
 ALTER TABLE `inventory`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `leave_requests`
+--
+ALTER TABLE `leave_requests`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -658,6 +823,13 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `gmail` (`gmail`);
 
 --
+-- Indexes for table `user_addresses`
+--
+ALTER TABLE `user_addresses`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `user_id` (`user_id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -665,13 +837,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
 
 --
 -- AUTO_INCREMENT for table `attendance_logs`
 --
 ALTER TABLE `attendance_logs`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `branches`
@@ -689,7 +861,13 @@ ALTER TABLE `favorites`
 -- AUTO_INCREMENT for table `inventory`
 --
 ALTER TABLE `inventory`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `leave_requests`
+--
+ALTER TABLE `leave_requests`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `menu_items`
@@ -701,19 +879,19 @@ ALTER TABLE `menu_items`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=92;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=131;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=112;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=159;
 
 --
 -- AUTO_INCREMENT for table `staff`
 --
 ALTER TABLE `staff`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `staff_attendance`
@@ -726,6 +904,12 @@ ALTER TABLE `staff_attendance`
 --
 ALTER TABLE `users`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- AUTO_INCREMENT for table `user_addresses`
+--
+ALTER TABLE `user_addresses`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- Constraints for dumped tables
