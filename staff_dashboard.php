@@ -620,13 +620,12 @@ try {
             <table style="width:100%; border-collapse:collapse;">
                 <thead>
                     <tr style="background:#3d3d3d; text-align:left;">
-                        <th style="padding:15px; border-radius:10px 0 0 10px;">ID</th>
-                        <th style="padding:15px;">Date</th>
-                        <th style="padding:15px;">Items</th>
-                        <th style="padding:15px;">Total</th>
-                        <th style="padding:15px;">Status</th>
-                        <th style="padding:15px; border-radius:0 10px 10px 0;">Action</th>
-                    </tr>
+    <th style="padding:15px; border-radius:10px 0 0 10px;">ID</th>
+    <th style="padding:15px;">Date</th>
+    <th style="padding:15px;">Items</th>
+    <th style="padding:15px;">Total</th>
+    <th style="padding:15px; border-radius:0 10px 10px 0;">Status</th>
+</tr>
                 </thead>
                 <tbody id="full-order-history"></tbody>
             </table>
@@ -634,23 +633,9 @@ try {
     </div>
 
     <div id="view-stock" class="view-section" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h2 style="margin:0;">Stock Management</h2>
-<button onclick="addNewStockItem()" style="
-    padding: 14px 28px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 50px;
-    font-weight: 700;
-    font-size: 15px;
-    cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    transition: 0.2s;
-">
-    <i class="fas fa-plus"></i> Add New Item
-</button>
-        </div>
+        <div style="margin-bottom:20px;">
+    <h2 style="margin:0;">Stock Management</h2>
+</div>
 
         <div style="display:flex; gap:15px; margin-bottom:20px; background:var(--white); padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
             <input type="text" id="stock-search"
@@ -784,10 +769,36 @@ function loadOrders() {
             }
             isFirstLoad = false;
 
-            allOrders = orders;
+           allOrders = orders.map(order => {
+    return {
+        ...order,
+        branch: order.branch || currentBranchFilter,
+        orderType: order.order_type,
+        payment: order.payment_method,
+        paymentProof: order.receipt_img ? 'uploads/' + order.receipt_img : null,
+        senderName: order.customer_name,
+        customerPhone: order.customer_phone,
+        timestamp: new Date(order.created_at).getTime(),
+        paymentStatus: order.payment_status || 'Pending',
+        items: Array.isArray(order.items)
+            ? order.items.map(i => ({
+                name: i.item_name || i.name || '-',
+                variant: i.variant || '',
+                qty: i.qty || 1,
+                customization: i.customization || ''
+            }))
+            : []
+    };
+});
             container.innerHTML = '';
 
             let countPending = 0, countPreparing = 0, countReady = 0, countComplete = 0;
+
+const today = new Date();
+const todayStr =
+    today.getFullYear() + '-' +
+    String(today.getMonth() + 1).padStart(2, '0') + '-' +
+    String(today.getDate()).padStart(2, '0');
 
             if (orders.length === 0) {
                 container.innerHTML = '<p style="text-align:center; color:#777; padding:20px;">No active orders.</p>';
@@ -795,39 +806,36 @@ function loadOrders() {
                 return;
             }
 
-            orders.forEach((order) => {
+            allOrders.forEach((order) => {
     order.branch = order.branch || currentBranchFilter;
-    order.orderType = order.order_type;
-    order.payment = order.payment_method;
-    order.paymentProof = order.receipt_img ? 'uploads/' + order.receipt_img : null;
-    order.senderName = order.customer_name;
-    order.customerPhone = order.customer_phone;
-    order.timestamp = new Date(order.created_at).getTime();
-    order.paymentStatus = order.payment_status || 'Pending';
-
-    order.items = order.items.map(i => ({
-        name: i.item_name,
-        variant: i.variant,
-        qty: i.qty,
-        customization: i.customization || ''
-    }));
 
     if (!order.status) order.status = 'Pending';
 
-    // filter ikut branch yang tengah login dulu
     if (order.branch !== currentBranchFilter) return;
 
-    // baru count ikut branch semasa
     if (order.status === 'Pending') countPending++;
     if (order.status === 'Preparing') countPreparing++;
     if (order.status === 'Ready') countReady++;
-    if (order.status === 'Served') countComplete++;
 
-    // All tak tunjuk complete
-    if (currentFilter === 'All' && order.status === 'Served') return;
+    const orderDateObj = new Date(order.created_at || order.timestamp);
+    const orderDateStr =
+        orderDateObj.getFullYear() + '-' +
+        String(orderDateObj.getMonth() + 1).padStart(2, '0') + '-' +
+        String(orderDateObj.getDate()).padStart(2, '0');
 
-    // filter ikut tab yang tengah dibuka
-    if (currentFilter !== 'All' && order.status !== currentFilter) return;
+    if (order.status === 'Served' && orderDateStr === todayStr) {
+    countComplete++;
+}
+
+// All tak tunjuk complete
+if (currentFilter === 'All' && order.status === 'Served') return;
+
+// Kalau tab Complete dibuka, papar Served hari ini sahaja
+if (currentFilter === 'Served') {
+    if (order.status !== 'Served' || orderDateStr !== todayStr) return;
+} else if (currentFilter !== 'All' && order.status !== currentFilter) {
+    return;
+}
 
     let paymentStatusHtml = '';
     if (order.payment === 'Cash') {
@@ -846,19 +854,20 @@ function loadOrders() {
     } else if (order.status === 'Preparing') {
         actionButton = `<button class="action-btn btn-ready" onclick="updateStatus(${order.id}, 'Ready')"><i class="fas fa-check"></i> Mark Ready</button>`;
     } else if (order.status === 'Ready') {
-    actionButton = `<button class="action-btn btn-serve" onclick="updateStatus(${order.id}, 'Served')">
-        <i class="fas fa-check-double"></i> Complete</button>`;
+        actionButton = `<button class="action-btn btn-serve" onclick="updateStatus(${order.id}, 'Served')"><i class="fas fa-check-double"></i> Complete</button>`;
     } else if (order.status === 'Served') {
         actionButton = `<div style="text-align:center; color:green; font-weight:bold;"><i class="fas fa-check-double"></i> Served</div>`;
     }
 
-    const deleteButton = `<button class="action-btn btn-delete" onclick="deleteOrder(${order.id})"><i class="fas fa-trash"></i> Delete</button>`;
 
-    let itemsHtml = order.items.map(i => `
-        <div class="order-item">
-            <span>${i.qty}x ${i.name} <span class="item-variant">(${i.variant})</span></span>
-            ${i.customization ? `<div style="font-size:12px; color:#e67e22; margin-left:10px; font-weight:bold;">👉 ${i.customization}</div>` : ''}
-        </div>`).join('');
+    let itemsHtml = Array.isArray(order.items)
+        ? order.items.map(i => `
+            <div class="order-item">
+                <span>${i.qty || 1}x ${i.name || '-'} <span class="item-variant">(${i.variant || ''})</span></span>
+                ${i.customization ? `<div style="font-size:12px; color:#e67e22; margin-left:10px; font-weight:bold;">👉 ${i.customization}</div>` : ''}
+            </div>
+        `).join('')
+        : '<div class="order-item"><span>No item data</span></div>';
 
     const timeElapsed = Math.floor((Date.now() - order.timestamp) / 60000);
     let urgentClass = '';
@@ -867,7 +876,7 @@ function loadOrders() {
     }
 
     const customerDetailsHtml = `
-        <div style="font-size:14px;color:black;; margin-bottom:10px; background:#f9f9f9; padding:10px; border-radius:8px;">
+        <div style="font-size:14px;color:black; margin-bottom:10px; background:#f9f9f9; padding:10px; border-radius:8px;">
             <div style="font-weight:bold; display:flex; align-items:center; gap:8px;"><i class="fas fa-user" style="color: black;"></i> ${order.senderName || 'Walk-in'}</div>
             ${order.customerPhone ? `<div style="font-size:13px; color: black; margin-top:5px; display:flex; align-items:center; gap:8px;"><i class="fas fa-phone"></i> ${order.customerPhone}</div>` : ''}
         </div>
@@ -888,7 +897,6 @@ function loadOrders() {
 
             <div class="order-actions">
                 ${actionButton}
-                ${deleteButton}
             </div>
         </div>
     `;
@@ -919,29 +927,37 @@ function loadOrderHistory() {
         }
 
         hasData = true;
-        const itemsSummary = order.items.map(i => `
-    <div style="margin-bottom:6px;">
-        ${i.qty}x ${i.name}
-    </div>
-`).join('');
 
-const totalAmount = parseFloat(order.total || order.total_amount || 0).toFixed(2);
+        let itemsSummary = 'No item data';
+        if (Array.isArray(order.items) && order.items.length > 0) {
+            itemsSummary = order.items.map(i => `
+                <div style="margin-bottom:6px;">
+                    ${i.qty || 1}x ${i.name || i.item_name || '-'}
+                </div>
+            `).join('');
+        } else if (order.item_name) {
+            itemsSummary = `
+                <div style="margin-bottom:6px;">
+                    ${order.qty || 1}x ${order.item_name}
+                </div>
+            `;
+        }
 
-tbody.innerHTML += `
-    <tr style="border-bottom:1px solid #444; vertical-align:top;">
-        <td style="padding:15px;">#${order.id}</td>
-        <td style="padding:15px; white-space:nowrap;">${new Date(order.created_at || order.timestamp).toLocaleDateString()}</td>
-        <td style="padding:15px; line-height:1.6;">${itemsSummary}</td>
-        <td style="padding:15px; white-space:nowrap;">RM ${totalAmount}</td>
-        <td style="padding:15px;"><span class="stock-status ${order.status === 'Ready' || order.status === 'Served' ? 'stock-ok' : 'stock-low'}">${order.status}</span></td>
-        <td style="padding:15px;"><button class="action-btn btn-delete" style="margin:0; padding:5px 10px; width:auto;" onclick="deleteOrder(${order.id})">Delete</button></td>
-    </tr>
-`;
+        const totalAmount = parseFloat(order.total || order.total_amount || 0).toFixed(2);
+
+        tbody.innerHTML += `
+            <tr style="border-bottom:1px solid #444; vertical-align:top;">
+                <td style="padding:15px;">#${order.id}</td>
+                <td style="padding:15px; white-space:nowrap;">${new Date(order.created_at || order.timestamp).toLocaleDateString()}</td>
+                <td style="padding:15px; line-height:1.6;">${itemsSummary}</td>
+                <td style="padding:15px; white-space:nowrap;">RM ${totalAmount}</td>
+                <td style="padding:15px;"><span class="stock-status ${order.status === 'Ready' || order.status === 'Served' ? 'stock-ok' : 'stock-low'}">${order.status}</span></td>
+            </tr>
+        `;
     });
 
     if (!hasData) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">No history found.</td></tr>';
-    }
+tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No history found.</td></tr>';    }
 }
 
 function updateStats(pending, preparing, ready, complete) {
@@ -956,15 +972,6 @@ function updateStatus(id, newStatus) {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ id: id, status: newStatus })
-    }).then(() => loadOrders());
-}
-
-function deleteOrder(id) {
-    if (!confirm('Are you sure you want to delete this order?')) return;
-    fetch('delete_order.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ id: id })
     }).then(() => loadOrders());
 }
 
@@ -1184,17 +1191,6 @@ function editStockLevel(index) {
         if (stock[index].level === 0) stock[index].status = 'Out of Stock';
         else if (stock[index].level < 10) stock[index].status = 'Low Stock';
         else stock[index].status = 'In Stock';
-        localStorage.setItem('bambam_stock', JSON.stringify(stock));
-        loadStock();
-        updateDashboardStock();
-    }
-}
-
-function addNewStockItem() {
-    const name = prompt("Enter new stock item name (e.g., 'Onions 🧅'):");
-    if (name) {
-        const stock = JSON.parse(localStorage.getItem('bambam_stock')) || defaultStock;
-        stock.push({ name: name, status: 'In Stock', level: 50 });
         localStorage.setItem('bambam_stock', JSON.stringify(stock));
         loadStock();
         updateDashboardStock();
