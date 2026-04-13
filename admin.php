@@ -704,6 +704,7 @@ try {
     // Fetch Activity Logs
     $stmt = $pdo->query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 50");
     $activityLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $newLogsCount = count($activityLogs);
 
 
     // Fetch Global Store Status
@@ -735,16 +736,30 @@ try {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script>
         (function () {
-            const seen = localStorage.getItem('ordersBadgeSeen');
-            const seenCount = localStorage.getItem('ordersBadgeSeenCount');
+            const root = document.documentElement;
 
-            document.documentElement.classList.remove('orders-badge-hidden');
+            const ordersSeen = localStorage.getItem('ordersBadgeSeen');
+            if (ordersSeen === 'true') {
+                root.classList.add('orders-badge-hidden');
+            } else {
+                root.classList.remove('orders-badge-hidden');
+            }
 
-            if (seen === 'true') {
-                document.documentElement.classList.add('orders-badge-hidden');
-                window.__ordersSeenCount = seenCount;
+            const reviewsSeen = localStorage.getItem('reviewsBadgeSeen');
+            if (reviewsSeen === 'true') {
+                root.classList.add('reviews-badge-hidden');
+            } else {
+                root.classList.remove('reviews-badge-hidden');
+            }
+
+            const logsSeen = localStorage.getItem('logsBadgeSeen');
+            if (logsSeen === 'true') {
+                root.classList.add('logs-badge-hidden');
+            } else {
+                root.classList.remove('logs-badge-hidden');
             }
         })();
     </script>
@@ -766,6 +781,14 @@ try {
         }
 
         .orders-badge-hidden #ordersBadge {
+            display: none !important;
+        }
+
+        .reviews-badge-hidden #reviewsBadge {
+            display: none !important;
+        }
+
+        .logs-badge-hidden #logsBadge {
             display: none !important;
         }
 
@@ -2390,27 +2413,58 @@ try {
                 <span class="badge" id="ordersBadge"><?php echo $pendingOrdersCount; ?></span>
             <?php endif; ?>
         </div>
+
         <?php if ($canManageStaff): ?>
-            <div class="nav-item" data-view="staff" onclick="switchView('staff', this)"><i class="fas fa-users"></i> Staff
-            </div><?php endif; ?>
-        <div class="nav-item" data-view="menu" onclick="switchView('menu', this)"><i class="fas fa-utensils"></i> Menu
-        </div>
-        <div class="nav-item" data-view="reviews" onclick="switchView('reviews', this)"><i class="fas fa-star"></i>
-            Reviews</div>
-        <?php if ($canViewReports): ?>
-            <div class="nav-item" data-view="inventory" onclick="switchView('inventory', this)"><i class="fas fa-boxes"></i>
-                Inventory</div><?php endif; ?>
-        <?php if ($canViewReports): ?>
-            <div class="nav-item" data-view="reports" onclick="switchView('reports', this)"><i
-                    class="fas fa-chart-line"></i> Reports</div><?php endif; ?>
-        <div class="nav-item" data-view="branches" onclick="switchView('branches', this)"><i class="fas fa-store"></i>
-            Branches</div>
-        <div class="nav-item" data-view="settings" onclick="switchView('settings', this)"><i class="fas fa-cog"></i>
-            Settings</div>
-        <div class="nav-item" data-view="logs" onclick="switchView('logs', this)">
-            <i class="fas fa-user-shield"></i> Activity Logs
+            <div class="nav-item <?php echo $current_view === 'staff' ? 'active' : ''; ?>" data-view="staff"
+                onclick="switchView('staff', this)">
+                <i class="fas fa-users"></i> Staff
+            </div>
+        <?php endif; ?>
+
+        <div class="nav-item <?php echo $current_view === 'menu' ? 'active' : ''; ?>" data-view="menu"
+            onclick="switchView('menu', this)">
+            <i class="fas fa-utensils"></i> Menu
         </div>
 
+        <div class="nav-item <?php echo $current_view === 'reviews' ? 'active' : ''; ?>" data-view="reviews"
+            onclick="switchView('reviews', this)">
+            <i class="fas fa-star"></i> Reviews
+            <?php if ($newReviewsCount > 0): ?>
+                <span class="badge" id="reviewsBadge"><?php echo $newReviewsCount; ?></span>
+            <?php endif; ?>
+        </div>
+
+        <?php if ($canViewReports): ?>
+            <div class="nav-item <?php echo $current_view === 'inventory' ? 'active' : ''; ?>" data-view="inventory"
+                onclick="switchView('inventory', this)">
+                <i class="fas fa-boxes"></i> Inventory
+            </div>
+        <?php endif; ?>
+
+        <?php if ($canViewReports): ?>
+            <div class="nav-item <?php echo $current_view === 'reports' ? 'active' : ''; ?>" data-view="reports"
+                onclick="switchView('reports', this)">
+                <i class="fas fa-chart-line"></i> Reports
+            </div>
+        <?php endif; ?>
+
+        <div class="nav-item <?php echo $current_view === 'branches' ? 'active' : ''; ?>" data-view="branches"
+            onclick="switchView('branches', this)">
+            <i class="fas fa-store"></i> Branches
+        </div>
+
+        <div class="nav-item <?php echo $current_view === 'settings' ? 'active' : ''; ?>" data-view="settings"
+            onclick="switchView('settings', this)">
+            <i class="fas fa-cog"></i> Settings
+        </div>
+
+        <div class="nav-item <?php echo $current_view === 'logs' ? 'active' : ''; ?>" data-view="logs"
+            onclick="switchView('logs', this)">
+            <i class="fas fa-user-shield"></i> Activity Logs
+            <?php if ($newLogsCount > 0): ?>
+                <span class="badge" id="logsBadge"><?php echo $newLogsCount; ?></span>
+            <?php endif; ?>
+        </div>
     </div>
 
     <!-- CONTENT WRAPPER -->
@@ -3771,11 +3825,32 @@ try {
             }
 
             if (viewId === 'orders') {
-                const badge = document.querySelector('[data-view="orders"] .badge');
+                const badge = document.getElementById('ordersBadge');
                 if (badge) {
-                    badge.style.display = 'none';
                     localStorage.setItem('ordersBadgeSeen', 'true');
                     localStorage.setItem('ordersBadgeSeenCount', badge.textContent.trim());
+                    badge.style.display = 'none';
+                    document.documentElement.classList.add('orders-badge-hidden');
+                }
+            }
+
+            if (viewId === 'reviews') {
+                const badge = document.getElementById('reviewsBadge');
+                if (badge) {
+                    localStorage.setItem('reviewsBadgeSeen', 'true');
+                    localStorage.setItem('reviewsBadgeSeenCount', badge.textContent.trim());
+                    badge.style.display = 'none';
+                    document.documentElement.classList.add('reviews-badge-hidden');
+                }
+            }
+
+            if (viewId === 'logs') {
+                const badge = document.getElementById('logsBadge');
+                if (badge) {
+                    localStorage.setItem('logsBadgeSeen', 'true');
+                    localStorage.setItem('logsBadgeSeenCount', badge.textContent.trim());
+                    badge.style.display = 'none';
+                    document.documentElement.classList.add('logs-badge-hidden');
                 }
             }
 
@@ -3817,34 +3892,28 @@ try {
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            const viewFromUrl = new URLSearchParams(window.location.search).get('view');
-            const savedView = localStorage.getItem('adminActiveView');
-            const viewToLoad = viewFromUrl || savedView || 'dashboard';
+            const checkBadge = (badgeId, seenKey, countKey, hiddenClass) => {
+                const badge = document.getElementById(badgeId);
+                if (!badge) return;
 
-            const ordersBadge = document.querySelector('[data-view="orders"] .badge');
-            const seenOrdersBadge = localStorage.getItem('ordersBadgeSeen');
-            const seenOrdersBadgeCount = localStorage.getItem('ordersBadgeSeenCount');
+                const currentCount = badge.textContent.trim();
+                const seen = localStorage.getItem(seenKey);
+                const seenCount = localStorage.getItem(countKey);
 
-            if (ordersBadge) {
-                const currentCount = ordersBadge.textContent.trim();
-
-                // kalau user dah pernah tengok orders dan count masih sama, hide badge
-                if (seenOrdersBadge === 'true' && seenOrdersBadgeCount === currentCount) {
-                    ordersBadge.style.display = 'none';
+                if (seen === 'true' && seenCount === currentCount) {
+                    badge.style.display = 'none';
+                    document.documentElement.classList.add(hiddenClass);
+                } else {
+                    localStorage.removeItem(seenKey);
+                    localStorage.setItem(countKey, currentCount);
+                    badge.style.display = '';
+                    document.documentElement.classList.remove(hiddenClass);
                 }
+            };
 
-                // kalau pending count berubah, anggap noti baru muncul balik
-                if (seenOrdersBadgeCount && seenOrdersBadgeCount !== currentCount) {
-                    localStorage.removeItem('ordersBadgeSeen');
-                    localStorage.setItem('ordersBadgeSeenCount', currentCount);
-                    ordersBadge.style.display = '';
-                }
-            }
-
-            const navItem = document.querySelector(`.nav-item[data-view="${viewToLoad}"]`);
-            if (navItem) {
-                switchView(viewToLoad, navItem);
-            }
+            checkBadge('ordersBadge', 'ordersBadgeSeen', 'ordersBadgeSeenCount', 'orders-badge-hidden');
+            checkBadge('reviewsBadge', 'reviewsBadgeSeen', 'reviewsBadgeSeenCount', 'reviews-badge-hidden');
+            checkBadge('logsBadge', 'logsBadgeSeen', 'logsBadgeSeenCount', 'logs-badge-hidden');
         });
 
         function previewImage(input, previewId) {
@@ -3883,7 +3952,7 @@ try {
             document.getElementById('edit-item-description').value = item.description;
             document.getElementById('edit-item-price').value = item.price;
             document.getElementById('edit-item-cost-price').value = item.cost_price;
-           
+
 
             const variantsContainer = document.getElementById('edit-variants-container');
             variantsContainer.innerHTML = ''; // Clear previous variants
