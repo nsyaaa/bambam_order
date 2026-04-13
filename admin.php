@@ -3,6 +3,9 @@ $current_page = basename($_SERVER['PHP_SELF'], '.php');
 $page_title = ($current_page == 'admin') ? 'Dashboard' : ucwords(str_replace(['_', '-'], ' ', $current_page));
 ?>
 <?php
+$current_view = $_GET['view'] ?? 'dashboard';
+?>
+<?php
 // ===============================
 // Bambam Burger - Admin Dashboard
 // ===============================
@@ -330,7 +333,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 if (!empty(trim($vname))) {
                                     $variantsData[] = [
                                         'name' => trim($vname),
-                                        'price' => (float)($_POST['variant_price'][$idx] ?? 0)
+                                        'price' => (float) ($_POST['variant_price'][$idx] ?? 0)
                                     ];
                                 }
                             }
@@ -445,10 +448,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         // Auto-detect view if not explicitly sent by form to ensure persistence
         if (empty($view)) {
-            if (in_array($action, ['delete_order', 'bulk_update_order_status', 'update_order_status', 'mark_as_paid'])) $view = 'orders';
-            elseif (in_array($action, ['create_menu_item', 'update_menu_item', 'delete_menu_item', 'toggle_availability'])) $view = 'menu';
-            elseif (in_array($action, ['create_user', 'delete_user', 'update_user_role', 'reset_user_password'])) $view = 'staff';
-            elseif (in_array($action, ['add_stock', 'update_stock', 'delete_stock'])) $view = 'inventory';
+            if (in_array($action, ['delete_order', 'bulk_update_order_status', 'update_order_status', 'mark_as_paid']))
+                $view = 'orders';
+            elseif (in_array($action, ['create_menu_item', 'update_menu_item', 'delete_menu_item', 'toggle_availability']))
+                $view = 'menu';
+            elseif (in_array($action, ['create_user', 'delete_user', 'update_user_role', 'reset_user_password']))
+                $view = 'staff';
+            elseif (in_array($action, ['add_stock', 'update_stock', 'delete_stock']))
+                $view = 'inventory';
         }
 
         $redirectUrl = "admin.php";
@@ -697,6 +704,7 @@ try {
     // Fetch Activity Logs
     $stmt = $pdo->query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 50");
     $activityLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $newLogsCount = count($activityLogs);
 
 
     // Fetch Global Store Status
@@ -728,6 +736,33 @@ try {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        (function () {
+            const root = document.documentElement;
+
+            const ordersSeen = localStorage.getItem('ordersBadgeSeen');
+            if (ordersSeen === 'true') {
+                root.classList.add('orders-badge-hidden');
+            } else {
+                root.classList.remove('orders-badge-hidden');
+            }
+
+            const reviewsSeen = localStorage.getItem('reviewsBadgeSeen');
+            if (reviewsSeen === 'true') {
+                root.classList.add('reviews-badge-hidden');
+            } else {
+                root.classList.remove('reviews-badge-hidden');
+            }
+
+            const logsSeen = localStorage.getItem('logsBadgeSeen');
+            if (logsSeen === 'true') {
+                root.classList.add('logs-badge-hidden');
+            } else {
+                root.classList.remove('logs-badge-hidden');
+            }
+        })();
+    </script>
     <style>
         * {
             box-sizing: border-box;
@@ -743,6 +778,18 @@ try {
             display: flex;
             height: 100vh;
             overflow: hidden;
+        }
+
+        .orders-badge-hidden #ordersBadge {
+            display: none !important;
+        }
+
+        .reviews-badge-hidden #reviewsBadge {
+            display: none !important;
+        }
+
+        .logs-badge-hidden #logsBadge {
+            display: none !important;
         }
 
         /* SIDEBAR */
@@ -1297,7 +1344,7 @@ try {
         /* STATUS BADGES */
         .btn-ghost {
             background: transparent;
-            border: 1px solid rgba(255,255,255,0.12);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             color: #cbd5e0;
             border-radius: 10px;
             cursor: pointer;
@@ -1710,6 +1757,26 @@ try {
         .action-btn {
             min-width: 95px;
             text-align: center;
+        }
+
+        .btn-refresh {
+            background: #2a2a2a;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-refresh:hover {
+            background: #3a3a3a;
+            border-color: rgba(255, 255, 255, 0.2);
         }
 
         /* Logout Button in Header */
@@ -2333,30 +2400,71 @@ try {
     <!-- SIDEBAR -->
     <div class="sidebar">
         <div class="logo"><i class="fas fa-hamburger"></i> BamBam Admin</div>
-        <div class="nav-item active" data-view="dashboard" onclick="switchView('dashboard', this)"><i
-                class="fas fa-th-large"></i> Dashboard</div>
-        <div class="nav-item" data-view="orders" onclick="switchView('orders', this)">
+
+        <div class="nav-item <?php echo $current_view === 'dashboard' ? 'active' : ''; ?>" data-view="dashboard"
+            onclick="switchView('dashboard', this)">
+            <i class="fas fa-th-large"></i> Dashboard
+        </div>
+
+        <div class="nav-item <?php echo $current_view === 'orders' ? 'active' : ''; ?>" data-view="orders"
+            onclick="switchView('orders', this)">
             <i class="fas fa-receipt"></i> Orders
-            <?php if ($pendingOrdersCount > 0): ?><span
-                    class="badge"><?php echo $pendingOrdersCount; ?></span><?php endif; ?>
+            <?php if ($pendingOrdersCount > 0): ?>
+                <span class="badge" id="ordersBadge"><?php echo $pendingOrdersCount; ?></span>
+            <?php endif; ?>
         </div>
+
         <?php if ($canManageStaff): ?>
-            <div class="nav-item" data-view="staff" onclick="switchView('staff', this)"><i class="fas fa-users"></i> Staff
-            </div><?php endif; ?>
-        <div class="nav-item" data-view="menu" onclick="switchView('menu', this)"><i class="fas fa-utensils"></i> Menu
+            <div class="nav-item <?php echo $current_view === 'staff' ? 'active' : ''; ?>" data-view="staff"
+                onclick="switchView('staff', this)">
+                <i class="fas fa-users"></i> Staff
+            </div>
+        <?php endif; ?>
+
+        <div class="nav-item <?php echo $current_view === 'menu' ? 'active' : ''; ?>" data-view="menu"
+            onclick="switchView('menu', this)">
+            <i class="fas fa-utensils"></i> Menu
         </div>
-        <div class="nav-item" data-view="reviews" onclick="switchView('reviews', this)"><i class="fas fa-star"></i>
-            Reviews</div>
+
+        <div class="nav-item <?php echo $current_view === 'reviews' ? 'active' : ''; ?>" data-view="reviews"
+            onclick="switchView('reviews', this)">
+            <i class="fas fa-star"></i> Reviews
+            <?php if ($newReviewsCount > 0): ?>
+                <span class="badge" id="reviewsBadge"><?php echo $newReviewsCount; ?></span>
+            <?php endif; ?>
+        </div>
+
         <?php if ($canViewReports): ?>
-            <div class="nav-item" data-view="inventory" onclick="switchView('inventory', this)"><i class="fas fa-boxes"></i>
-                Inventory</div><?php endif; ?>
+            <div class="nav-item <?php echo $current_view === 'inventory' ? 'active' : ''; ?>" data-view="inventory"
+                onclick="switchView('inventory', this)">
+                <i class="fas fa-boxes"></i> Inventory
+            </div>
+        <?php endif; ?>
+
         <?php if ($canViewReports): ?>
-            <div class="nav-item" data-view="reports" onclick="switchView('reports', this)"><i
-                    class="fas fa-chart-line"></i> Reports</div><?php endif; ?>
-        <div class="nav-item" data-view="branches" onclick="switchView('branches', this)"><i class="fas fa-store"></i>
-            Branches</div>
-        <div class="nav-item" data-view="settings" onclick="switchView('settings', this)"><i class="fas fa-cog"></i>
-            Settings</div>
+            <div class="nav-item <?php echo $current_view === 'reports' ? 'active' : ''; ?>" data-view="reports"
+                onclick="switchView('reports', this)">
+                <i class="fas fa-chart-line"></i> Reports
+            </div>
+        <?php endif; ?>
+
+        <div class="nav-item <?php echo $current_view === 'branches' ? 'active' : ''; ?>" data-view="branches"
+            onclick="switchView('branches', this)">
+            <i class="fas fa-store"></i> Branches
+        </div>
+
+        <div class="nav-item <?php echo $current_view === 'settings' ? 'active' : ''; ?>" data-view="settings"
+            onclick="switchView('settings', this)">
+            <i class="fas fa-cog"></i> Settings
+        </div>
+
+        <div class="nav-item <?php echo $current_view === 'logs' ? 'active' : ''; ?>" data-view="logs"
+            onclick="switchView('logs', this)">
+            <i class="fas fa-user-shield"></i> Activity Logs
+            <?php if ($newLogsCount > 0): ?>
+                <span class="badge" id="logsBadge"><?php echo $newLogsCount; ?></span>
+            <?php endif; ?>
+        </div>
     </div>
 
     <!-- CONTENT WRAPPER -->
@@ -2375,7 +2483,14 @@ try {
                         <div class="profile-role"><?php echo ucfirst($currentUserRole); ?></div>
                     </div>
                 </div>
-                <a href="admin_logout.php" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+
+                <button type="button" class="btn-refresh" onclick="refreshCurrentView()">
+                    <i class="fas fa-rotate-right"></i> Refresh
+                </button>
+
+                <a href="admin_logout.php" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
             </div>
         </header>
 
@@ -2389,7 +2504,7 @@ try {
             <?php endif; ?>
 
             <!-- VIEW: DASHBOARD -->
-            <div id="view-dashboard" class="view-section active">
+            <div id="view-dashboard" class="view-section <?php echo $current_view === 'dashboard' ? 'active' : ''; ?>">
                 <div class="dashboard-grid">
                     <!-- Stat Cards -->
                     <div class="premium-card stat-card" style="grid-column: span 3;"
@@ -2535,7 +2650,7 @@ try {
             </div>
 
             <!-- VIEW: STAFF -->
-            <div id="view-staff" class="view-section">
+            <div id="view-staff" class="view-section <?php echo $current_view === 'staff' ? 'active' : ''; ?>">
                 <div class="panel-card">
                     <h3 style="margin-top:0; color: #ffffff;">➕ Add New Admin/Staff</h3>
                     <form method="POST" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
@@ -2636,7 +2751,7 @@ try {
             </div>
 
             <!-- VIEW: ORDERS -->
-            <div id="view-orders" class="view-section">
+            <div id="view-orders" class="view-section <?php echo $current_view === 'orders' ? 'active' : ''; ?>">
                 <div class="panel-card">
                     <h3 style="margin-top:0; color: #ffffff;">📋 Recent Orders</h3>
 
@@ -2768,7 +2883,7 @@ try {
                 </div>
             </div>
             <!-- VIEW: REVIEWS -->
-            <div id="view-reviews" class="view-section">
+            <div id="view-reviews" class="view-section <?php echo $current_view === 'reviews' ? 'active' : ''; ?>">
                 <!-- Review Overview -->
                 <div class="review-overview-grid">
                     <div class="panel-card avg-rating-card">
@@ -2912,7 +3027,7 @@ try {
             </div>
 
             <!-- VIEW: MENU MANAGEMENT -->
-            <div id="view-menu" class="view-section">
+            <div id="view-menu" class="view-section <?php echo $current_view === 'menu' ? 'active' : ''; ?>">
                 <div class="panel-card">
                     <h3 style="margin-top:0; color: #ffffff;">➕ Add New Menu Item</h3>
                     <form method="POST" enctype="multipart/form-data"
@@ -2970,47 +3085,80 @@ try {
                             $isAvailable = (int) $item['is_available'] === 1;
 
                             $profitMargin = 0;
-                            if ((float)$item['price'] > 0) {
-                                $profitMargin = (((float)$item['price'] - (float)$item['cost_price']) / (float)$item['price']) * 100;
+                            if ((float) $item['price'] > 0) {
+                                $profitMargin = (((float) $item['price'] - (float) $item['cost_price']) / (float) $item['price']) * 100;
                             }
 
                             $lowerName = strtolower(trim($item['name']));
                             $imgFilename = str_replace(' ', '', $lowerName) . '.png';
 
                             // Match menu.php mapping
-                            if ($lowerName === 'ayam goreng krup krap') $imgFilename = 'ayamkrupkrap.jpg';
-                            if ($lowerName === 'burger mix xl') $imgFilename = 'xl.jpg';
-                            if ($lowerName === 'lava cheese burger') $imgFilename = 'lavacheese.jpg';
-                            if ($lowerName === 'cheese steak') $imgFilename = 'cheesesteak.jpg';
-                            if ($lowerName === 'chicken grill burger') $imgFilename = 'grill.jpg';
-                            if ($lowerName === 'hawaiian spicy') $imgFilename = 'hawaii.jpg';
-                            if ($lowerName === 'burger kambing') $imgFilename = 'kambing.jpg';
-                            if ($lowerName === 'burger sate ayam') $imgFilename = 'sate.jpg';
-                            if ($lowerName === 'smash burger' || $lowerName === 'beef smash burger') $imgFilename = 'smash.jpg';
-                            if ($lowerName === 'mozzarella cheese') $imgFilename = 'mozz.jpg';
-                            if ($lowerName === 'telur') $imgFilename = 'egg.jpg';
-                            if ($lowerName === 'cheddar cheese') $imgFilename = 'cheddar.jpg';
-                            if ($lowerName === 'green tea') $imgFilename = 'green.jpg';
-                            if ($lowerName === 'chocolate') $imgFilename = 'milo.jpg';
-                            if ($lowerName === 'indocafe') $imgFilename = 'kopi.jpg';
-                            if ($lowerName === 'teh') $imgFilename = 'tea.jpg';
-                            if ($lowerName === 'kopi') $imgFilename = 'black.jpg';
-                            if ($lowerName === 'jus buah') $imgFilename = 'oren.jpg';
-                            if ($lowerName === 'teh o limau') $imgFilename = 'limau.jpg';
-                            if ($lowerName === 'minuman bergas') $imgFilename = 'aw.jpg';
-                            if ($lowerName === 'burger wagyu' || $lowerName === 'wagyu burger') $imgFilename = 'wagyu.jpg';
-                            if ($lowerName === 'burger itik' || $lowerName === 'itik burger') $imgFilename = 'itik.jpg';
-                            if ($lowerName === 'nugget tempura') $imgFilename = 'nug.jpg';
-                            if ($lowerName === 'cheezy wedges') $imgFilename = 'wedgesss.jpg';
-                            if ($lowerName === 'ayam popcorn') $imgFilename = 'pop.jpg';
-                            if ($lowerName === 'teh o laici') $imgFilename = 'laici.png';
-                            if ($lowerName === 'limau asam boi') $imgFilename = 'asam.jpg';
-                            if ($lowerName === 'sirap bandung') $imgFilename = 'bandung.jpg';
-                            if ($lowerName === 'sirap limau') $imgFilename = 'sirap.png';
-                            if ($lowerName === 'oren sunquick') $imgFilename = 'oren.jpg';
-                            if ($lowerName === 'extrajoss susu') $imgFilename = 'extra.jpg';
-                            if ($lowerName === 'extrajoss') $imgFilename = 'joss.jpg';
-                            if ($lowerName === 'sirap') $imgFilename = 'rose.jpg';
+                            if ($lowerName === 'ayam goreng krup krap')
+                                $imgFilename = 'ayamkrupkrap.jpg';
+                            if ($lowerName === 'burger mix xl')
+                                $imgFilename = 'xl.jpg';
+                            if ($lowerName === 'lava cheese burger')
+                                $imgFilename = 'lavacheese.jpg';
+                            if ($lowerName === 'cheese steak')
+                                $imgFilename = 'cheesesteak.jpg';
+                            if ($lowerName === 'chicken grill burger')
+                                $imgFilename = 'grill.jpg';
+                            if ($lowerName === 'hawaiian spicy')
+                                $imgFilename = 'hawaii.jpg';
+                            if ($lowerName === 'burger kambing')
+                                $imgFilename = 'kambing.jpg';
+                            if ($lowerName === 'burger sate ayam')
+                                $imgFilename = 'sate.jpg';
+                            if ($lowerName === 'smash burger' || $lowerName === 'beef smash burger')
+                                $imgFilename = 'smash.jpg';
+                            if ($lowerName === 'mozzarella cheese')
+                                $imgFilename = 'mozz.jpg';
+                            if ($lowerName === 'telur')
+                                $imgFilename = 'egg.jpg';
+                            if ($lowerName === 'cheddar cheese')
+                                $imgFilename = 'cheddar.jpg';
+                            if ($lowerName === 'green tea')
+                                $imgFilename = 'green.jpg';
+                            if ($lowerName === 'chocolate')
+                                $imgFilename = 'milo.jpg';
+                            if ($lowerName === 'indocafe')
+                                $imgFilename = 'kopi.jpg';
+                            if ($lowerName === 'teh')
+                                $imgFilename = 'tea.jpg';
+                            if ($lowerName === 'kopi')
+                                $imgFilename = 'black.jpg';
+                            if ($lowerName === 'jus buah')
+                                $imgFilename = 'oren.jpg';
+                            if ($lowerName === 'teh o limau')
+                                $imgFilename = 'limau.jpg';
+                            if ($lowerName === 'minuman bergas')
+                                $imgFilename = 'aw.jpg';
+                            if ($lowerName === 'burger wagyu' || $lowerName === 'wagyu burger')
+                                $imgFilename = 'wagyu.jpg';
+                            if ($lowerName === 'burger itik' || $lowerName === 'itik burger')
+                                $imgFilename = 'itik.jpg';
+                            if ($lowerName === 'nugget tempura')
+                                $imgFilename = 'nug.jpg';
+                            if ($lowerName === 'cheezy wedges')
+                                $imgFilename = 'wedgesss.jpg';
+                            if ($lowerName === 'ayam popcorn')
+                                $imgFilename = 'pop.jpg';
+                            if ($lowerName === 'teh o laici')
+                                $imgFilename = 'laici.png';
+                            if ($lowerName === 'limau asam boi')
+                                $imgFilename = 'asam.jpg';
+                            if ($lowerName === 'sirap bandung')
+                                $imgFilename = 'bandung.jpg';
+                            if ($lowerName === 'sirap limau')
+                                $imgFilename = 'sirap.png';
+                            if ($lowerName === 'oren sunquick')
+                                $imgFilename = 'oren.jpg';
+                            if ($lowerName === 'extrajoss susu')
+                                $imgFilename = 'extra.jpg';
+                            if ($lowerName === 'extrajoss')
+                                $imgFilename = 'joss.jpg';
+                            if ($lowerName === 'sirap')
+                                $imgFilename = 'rose.jpg';
 
 
                             // Prefer uploaded DB image if exists
@@ -3020,13 +3168,13 @@ try {
                             }
                             ?>
                             <div class="menu-card <?php echo !$isAvailable ? 'sold-out' : ''; ?>"
-                                 data-category="<?php echo htmlspecialchars($item['category']); ?>">
+                                data-category="<?php echo htmlspecialchars($item['category']); ?>">
 
                                 <div class="menu-card-img">
                                     <img src="<?php echo htmlspecialchars($cardImage); ?>"
-                                         alt="<?php echo htmlspecialchars($item['name']); ?>"
-                                         style="width:100%; height:100%; object-fit:cover; display:block;"
-                                         onerror="this.src='images/hero_burger.png'">
+                                        alt="<?php echo htmlspecialchars($item['name']); ?>"
+                                        style="width:100%; height:100%; object-fit:cover; display:block;"
+                                        onerror="this.src='images/hero_burger.png'">
                                     <span class="category-badge"><?php echo ucfirst($item['category']); ?></span>
                                     <?php if (in_array($item['name'], $bestSellers)): ?>
                                         <span class="bestseller-badge"><i class="fas fa-star"></i> Best Seller</span>
@@ -3080,7 +3228,7 @@ try {
             </div>
 
             <!-- VIEW: INVENTORY -->
-            <div id="view-inventory" class="view-section">
+            <div id="view-inventory" class="view-section <?php echo $current_view === 'inventory' ? 'active' : ''; ?>">
                 <div class="panel-card">
                     <h3 style="margin-top:0; color: #ffffff;">📦 Inventory Management</h3>
 
@@ -3157,7 +3305,7 @@ try {
             </div>
 
             <!-- VIEW: REPORTS -->
-            <div id="view-reports" class="view-section">
+            <div id="view-reports" class="view-section <?php echo $current_view === 'reports' ? 'active' : ''; ?>">
 
                 <!-- 1. DATE FILTER BAR -->
                 <div class="panel-card"
@@ -3338,95 +3486,120 @@ try {
             </div>
 
             <!-- VIEW: BRANCHES -->
-           <div id="view-branches" class="view-section">
-    <div class="panel-card">
-        <h3 style="margin-top:0; color: #ffffff;">🏪 Branch Management</h3>
+            <div id="view-branches" class="view-section <?php echo $current_view === 'branches' ? 'active' : ''; ?>">
+                <div class="panel-card">
+                    <h3 style="margin-top:0; color: #ffffff;">🏪 Branch Management</h3>
 
-        <div class="branch-grid">
-            <?php
-            // Ambil data terus dari database supaya ID sentiasa sync
-            $stmt = $pdo->query("SELECT * FROM branches ORDER BY name ASC");
-            $branchesList = $stmt->fetchAll();
+                    <div class="branch-grid">
+                        <?php
+                        // Ambil data terus dari database supaya ID sentiasa sync
+                        $stmt = $pdo->query("SELECT * FROM branches ORDER BY name ASC");
+                        $branchesList = $stmt->fetchAll();
 
-            if (!empty($branchesList)): 
-                foreach ($branchesList as $branch): ?>
-                    <div class="management-card">
-                        <h3><?php echo htmlspecialchars($branch['name']); ?></h3>
-                        <p>📞 <?php echo htmlspecialchars($branch['phone']); ?></p>
-                        <div class="management-actions">
-                            <a href="tel:<?php echo preg_replace('/[^0-9]/', '', $branch['phone']); ?>" class="btn-call">
-                                <i class="fas fa-phone-alt"></i> Call
-                            </a>
-                            <button type="button" class="btn-edit"
-                                onclick='openBranchModal(
-                                    <?php echo (int)$branch["id"]; ?>,
+                        if (!empty($branchesList)):
+                            foreach ($branchesList as $branch): ?>
+                                <div class="management-card">
+                                    <h3><?php echo htmlspecialchars($branch['name']); ?></h3>
+                                    <p>📞 <?php echo htmlspecialchars($branch['phone']); ?></p>
+                                    <div class="management-actions">
+                                        <a href="tel:<?php echo preg_replace('/[^0-9]/', '', $branch['phone']); ?>"
+                                            class="btn-call">
+                                            <i class="fas fa-phone-alt"></i> Call
+                                        </a>
+                                        <button type="button" class="btn-edit" onclick='openBranchModal(
+                                    <?php echo (int) $branch["id"]; ?>,
                                     <?php echo json_encode($branch["name"]); ?>,
                                     <?php echo json_encode($branch["phone"]); ?>
                                 )'>
-                                Edit
-                            </button>
-                        </div>
+                                            Edit
+                                        </button>
+                                    </div>
+                                </div>
+                            <?php endforeach;
+                        else: ?>
+                            <p style="color: #a0aec0;">No branches found in database.</p>
+                        <?php endif; ?>
                     </div>
-                <?php endforeach; 
-            else: ?>
-                <p style="color: #a0aec0;">No branches found in database.</p>
-            <?php endif; ?>
-        </div>
-    </div>
-</div>
+                </div>
+            </div>
 
-<style>
-    /* Pakai style asal kau cuma aku kemaskan sikit grid dia */
-    .branch-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 20px;
-        margin-top: 20px;
-    }
+            <style>
+                /* Pakai style asal kau cuma aku kemaskan sikit grid dia */
+                .branch-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                    gap: 20px;
+                    margin-top: 20px;
+                }
 
-    .management-card {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
-        transition: all 0.2s ease;
-    }
+                .management-card {
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 12px;
+                    padding: 20px;
+                    text-align: center;
+                    transition: all 0.2s ease;
+                }
 
-    .management-card:hover {
-        background: rgba(255, 255, 255, 0.08);
-        border-color: #ff6600;
-        transform: translateY(-5px);
-    }
+                .management-card:hover {
+                    background: rgba(255, 255, 255, 0.08);
+                    border-color: #ff6600;
+                    transform: translateY(-5px);
+                }
 
-    .management-card h3 { color: #ffffff; margin: 0 0 10px 0; font-size: 18px; }
-    .management-card p { color: #a0aec0; margin: 0 0 20px 0; font-size: 14px; }
+                .management-card h3 {
+                    color: #ffffff;
+                    margin: 0 0 10px 0;
+                    font-size: 18px;
+                }
 
-    .management-actions { display: flex; gap: 10px; justify-content: center; }
+                .management-card p {
+                    color: #a0aec0;
+                    margin: 0 0 20px 0;
+                    font-size: 14px;
+                }
 
-    .btn-call, .btn-edit {
-        padding: 8px 12px;
-        border-radius: 6px;
-        text-decoration: none;
-        font-size: 13px;
-        font-weight: bold;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        border: none;
-        cursor: pointer;
-        flex: 1;
-        justify-content: center;
-        color: white !important;
-    }
+                .management-actions {
+                    display: flex;
+                    gap: 10px;
+                    justify-content: center;
+                }
 
-    .btn-call { background-color: #2ecc71; }
-    .btn-edit { background-color: #ff6600; }
-    .btn-call:hover { background-color: #27ae60; }
-    .btn-edit:hover { background-color: #e65c00; }
-</style>
+                .btn-call,
+                .btn-edit {
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    text-decoration: none;
+                    font-size: 13px;
+                    font-weight: bold;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    border: none;
+                    cursor: pointer;
+                    flex: 1;
+                    justify-content: center;
+                    color: white !important;
+                }
+
+                .btn-call {
+                    background-color: #2ecc71;
+                }
+
+                .btn-edit {
+                    background-color: #ff6600;
+                }
+
+                .btn-call:hover {
+                    background-color: #27ae60;
+                }
+
+                .btn-edit:hover {
+                    background-color: #e65c00;
+                }
+            </style>
             <!-- VIEW: ACTIVITY LOGS -->
-            <div id="view-logs" class="view-section">
+            <div id="view-logs" class="view-section <?php echo $current_view === 'logs' ? 'active' : ''; ?>">
                 <div class="panel-card">
                     <h3 style="margin-top:0; color: #ffffff;">📜 System Activity Logs</h3>
                     <table class="admin-table">
@@ -3480,7 +3653,7 @@ try {
                 }
             </style>
 
-            <div id="view-settings" class="view-section">
+            <div id="view-settings" class="view-section <?php echo $current_view === 'settings' ? 'active' : ''; ?>">
                 <div class="panel-card">
                     <h3 style="margin-top:0; color: #ffffff;">⚙️ System Settings</h3>
 
@@ -3561,9 +3734,6 @@ try {
                         id="edit-item-price" name="price" required></div>
                 <div class="form-group"><label>Cost Price (RM)</label><input type="number" step="0.01"
                         id="edit-item-cost-price" name="cost_price"></div>
-                <div class="form-group" style="justify-content: center;"><label
-                        style="display:flex; align-items:center; gap:10px; margin-top:15px;"><input type="checkbox"
-                            id="edit-item-has_protein" name="has_protein"> Has Protein Option</label></div>
                 <div class="form-group" style="grid-column: span 3;">
                     <label>Variants</label>
                     <div id="edit-variants-container">
@@ -3645,7 +3815,8 @@ try {
                 inventory: 'Inventory',
                 reports: 'Sales Reports',
                 branches: 'Our Branches',
-                settings: 'System Settings'
+                settings: 'System Settings',
+                logs: 'Activity Logs'
             };
 
             const headerTitle = document.querySelector('.top-header h2');
@@ -3654,8 +3825,33 @@ try {
             }
 
             if (viewId === 'orders') {
-                const badge = document.querySelector('.sidebar .badge');
-                if (badge) badge.style.display = 'none';
+                const badge = document.getElementById('ordersBadge');
+                if (badge) {
+                    localStorage.setItem('ordersBadgeSeen', 'true');
+                    localStorage.setItem('ordersBadgeSeenCount', badge.textContent.trim());
+                    badge.style.display = 'none';
+                    document.documentElement.classList.add('orders-badge-hidden');
+                }
+            }
+
+            if (viewId === 'reviews') {
+                const badge = document.getElementById('reviewsBadge');
+                if (badge) {
+                    localStorage.setItem('reviewsBadgeSeen', 'true');
+                    localStorage.setItem('reviewsBadgeSeenCount', badge.textContent.trim());
+                    badge.style.display = 'none';
+                    document.documentElement.classList.add('reviews-badge-hidden');
+                }
+            }
+
+            if (viewId === 'logs') {
+                const badge = document.getElementById('logsBadge');
+                if (badge) {
+                    localStorage.setItem('logsBadgeSeen', 'true');
+                    localStorage.setItem('logsBadgeSeenCount', badge.textContent.trim());
+                    badge.style.display = 'none';
+                    document.documentElement.classList.add('logs-badge-hidden');
+                }
             }
 
             document.querySelectorAll('.view-section').forEach(section => {
@@ -3674,7 +3870,51 @@ try {
             if (element) {
                 element.classList.add('active');
             }
+
+            // simpan current view
+            localStorage.setItem('adminActiveView', viewId);
+
+            // update URL tanpa reload
+            const url = new URL(window.location);
+            url.searchParams.set('view', viewId);
+            window.history.replaceState({}, '', url);
         }
+
+        function refreshCurrentView() {
+            const activeView =
+                localStorage.getItem('adminActiveView') ||
+                new URLSearchParams(window.location.search).get('view') ||
+                'dashboard';
+
+            const url = new URL(window.location);
+            url.searchParams.set('view', activeView);
+            window.location.href = url.toString();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const checkBadge = (badgeId, seenKey, countKey, hiddenClass) => {
+                const badge = document.getElementById(badgeId);
+                if (!badge) return;
+
+                const currentCount = badge.textContent.trim();
+                const seen = localStorage.getItem(seenKey);
+                const seenCount = localStorage.getItem(countKey);
+
+                if (seen === 'true' && seenCount === currentCount) {
+                    badge.style.display = 'none';
+                    document.documentElement.classList.add(hiddenClass);
+                } else {
+                    localStorage.removeItem(seenKey);
+                    localStorage.setItem(countKey, currentCount);
+                    badge.style.display = '';
+                    document.documentElement.classList.remove(hiddenClass);
+                }
+            };
+
+            checkBadge('ordersBadge', 'ordersBadgeSeen', 'ordersBadgeSeenCount', 'orders-badge-hidden');
+            checkBadge('reviewsBadge', 'reviewsBadgeSeen', 'reviewsBadgeSeenCount', 'reviews-badge-hidden');
+            checkBadge('logsBadge', 'logsBadgeSeen', 'logsBadgeSeenCount', 'logs-badge-hidden');
+        });
 
         function previewImage(input, previewId) {
             const preview = document.getElementById(previewId);
@@ -3712,7 +3952,7 @@ try {
             document.getElementById('edit-item-description').value = item.description;
             document.getElementById('edit-item-price').value = item.price;
             document.getElementById('edit-item-cost-price').value = item.cost_price;
-            document.getElementById('edit-item-has_protein').checked = item.has_protein == 1;
+
 
             const variantsContainer = document.getElementById('edit-variants-container');
             variantsContainer.innerHTML = ''; // Clear previous variants
@@ -4272,9 +4512,12 @@ try {
         // Auto-switch to section view if URL param is present
         const urlParams = new URLSearchParams(window.location.search);
         const viewParam = urlParams.get('view');
-        if (viewParam) {
-            const navItem = document.querySelector(`[data-view="${viewParam}"]`);
-            if (navItem) switchView(viewParam, navItem);
+        const savedView = localStorage.getItem('adminActiveView');
+        const initialView = viewParam || savedView || 'dashboard';
+
+        const navItem = document.querySelector(`[data-view="${initialView}"]`);
+        if (navItem) {
+            switchView(initialView, navItem);
         }
 
         function filterGlobal(query) {
