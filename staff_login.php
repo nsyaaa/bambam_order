@@ -2,6 +2,8 @@
 session_start();
 include 'db.php';
 
+
+
 // Handle Logout
 if (isset($_GET['action']) && $_GET['action'] == 'logout') {
     session_destroy();
@@ -79,6 +81,7 @@ if ($matchedBranch) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Staff Portal - Bambam Burger</title>
+<link rel="icon" href="logo.png">
 <style>
     body {
         margin: 0;

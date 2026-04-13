@@ -23,6 +23,7 @@ if (isset($_GET['logout'])) {
 
 include 'db.php';
 
+
 // --- SYSTEM SETUP (Auto-Create Tables) ---
 try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS activity_logs (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT, user_name VARCHAR(50), action VARCHAR(50), details TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
@@ -432,28 +433,53 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
                 break;
 
-            case 'update_stock':
-                if (isset($_POST['id'], $_POST['quantity'])) {
-                    try {
-                        $qty = (int) $_POST['quantity'];
-                        $status = $qty == 0 ? 'Out of Stock' : ($qty < 10 ? 'Low Stock' : 'In Stock');
+case 'update_stock':
+    if (isset($_POST['id'], $_POST['quantity'])) {
+        try {
+            $qty = (int) $_POST['quantity'];
+            $status = $qty == 0 ? 'Out of Stock' : ($qty < 10 ? 'Low Stock' : 'In Stock');
 
-                        $stmt = $pdo->prepare("UPDATE inventory SET quantity = ?, status = ? WHERE id = ?");
-                        $stmt->execute([$qty, $status, $_POST['id']]);
+            $stmt = $pdo->prepare("UPDATE inventory SET quantity = ?, status = ? WHERE id = ?");
+            $stmt->execute([$qty, $status, $_POST['id']]);
 
-                        $message = "Stock updated!";
-                    } catch (PDOException $e) {
-                        $message = "Error: " . $e->getMessage();
-                    }
-                }
-                break;
+            $message = "Stock updated!";
+        } catch (PDOException $e) {
+            $message = "Error: " . $e->getMessage();
+        }
+    }
+    break;
 
-            case 'toggle_store':
-                $newStatus = isset($_POST['status']) ? 'open' : 'closed';
-                $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES ('global_store_status', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
-                $stmt->execute([$newStatus, $newStatus]);
-                $message = "Store is now " . strtoupper($newStatus);
-                break;
+case 'delete_stock':
+    if (isset($_POST['id'])) {
+        try {
+            $stmt = $pdo->prepare("DELETE FROM inventory WHERE id = ?");
+            $stmt->execute([$_POST['id']]);
+
+            $message = "Stock deleted successfully!";
+            logActivity($pdo, $currentUserId, $currentUserName, "Delete Stock", "Deleted Inventory ID {$_POST['id']}");
+        } catch (PDOException $e) {
+            $message = "Error: " . $e->getMessage();
+        }
+    }
+    break;
+    
+case 'toggle_store':
+    $newStatus = isset($_POST['status']) ? 'open' : 'closed';
+
+    $stmt = $pdo->prepare("
+        INSERT INTO system_settings (setting_key, setting_value)
+        VALUES ('global_store_status', ?)
+        ON DUPLICATE KEY UPDATE setting_value = ?
+    ");
+    $stmt->execute([$newStatus, $newStatus]);
+
+    if ($newStatus === 'closed') {
+        $pdo->exec("UPDATE branches SET is_open = 0");
+    }
+
+    $message = "Store is now " . strtoupper($newStatus);
+    logActivity($pdo, $currentUserId, $currentUserName, "Toggle Global Store", "Global store set to {$newStatus}");
+    break;
 
             case 'update_branch':
                 // Guna var_dump untuk tengok apa yang form tu hantar sebenarnya
@@ -493,16 +519,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $view = $_POST['view'] ?? '';
 
         // Auto-detect view if not explicitly sent by form to ensure persistence
-        if (empty($view)) {
-            if (in_array($action, ['delete_order', 'bulk_update_order_status', 'update_order_status', 'mark_as_paid']))
-                $view = 'orders';
-            elseif (in_array($action, ['create_menu_item', 'update_menu_item', 'delete_menu_item', 'toggle_availability']))
-                $view = 'menu';
-            elseif (in_array($action, ['create_user', 'delete_user', 'update_user_role', 'reset_user_password']))
-                $view = 'staff';
-            elseif (in_array($action, ['add_stock', 'update_stock', 'delete_stock']))
-                $view = 'inventory';
-        }
+      if (empty($view)) {
+    if (in_array($action, ['delete_order', 'bulk_update_order_status', 'update_order_status', 'mark_as_paid'])) {
+        $view = 'orders';
+    } elseif (in_array($action, ['create_menu_item', 'update_menu_item', 'delete_menu_item', 'toggle_availability'])) {
+        $view = 'menu';
+    } elseif (in_array($action, ['create_user', 'delete_user', 'update_user_role', 'reset_user_password'])) {
+        $view = 'staff';
+    } elseif (in_array($action, ['add_stock', 'update_stock', 'delete_stock'])) {
+        $view = 'inventory';
+    } elseif ($action === 'toggle_store') {
+    $view = 'settings';
+}
+}
 
         $redirectUrl = "admin.php";
         $params = [];
@@ -782,6 +811,7 @@ try {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" href="logo.png">
 
     <script>
         (function () {
@@ -808,6 +838,8 @@ try {
                 root.classList.remove('logs-badge-hidden');
             }
         })();
+
+        
     </script>
     <style>
         * {
@@ -3406,11 +3438,12 @@ try {
                                                     </form>
 
                                                     <form method="POST" onsubmit="return confirm('Delete this item?');"
-                                                        style="margin:0;">
-                                                        <input type="hidden" name="action" value="delete_stock">
-                                                        <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
-                                                        <button type="submit" class="btn-danger">Delete</button>
-                                                    </form>
+    style="margin:0;">
+    <input type="hidden" name="view" value="inventory">
+    <input type="hidden" name="action" value="delete_stock">
+    <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+    <button type="submit" class="btn-danger">Delete</button>
+</form>
                                                 </div>
                                             </td>
                                         </tr>
@@ -3777,6 +3810,187 @@ try {
                     border-color: #2ecc71;
                     background: rgba(46, 204, 113, 0.05);
                 }
+                .store-control-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding: 30px;
+    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(255,81,0,0.18), rgba(255,81,0,0.05));
+    border: 1px solid rgba(255,81,0,0.22);
+}
+
+.store-control-label {
+    font-size: 12px;
+    letter-spacing: 1.8px;
+    font-weight: 800;
+    color: #ffb089;
+    margin-bottom: 10px;
+}
+
+.store-control-hero h2 {
+    margin: 0 0 10px 0;
+    color: #fff;
+    font-size: 28px;
+}
+
+.store-control-hero p {
+    margin: 0;
+    color: #c7c7c7;
+    max-width: 620px;
+    line-height: 1.6;
+}
+
+.store-master-toggle {
+    position: relative;
+    display: inline-block;
+    width: 90px;
+    height: 46px;
+}
+
+.store-master-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.store-master-slider {
+    position: absolute;
+    inset: 0;
+    background: #3a3a3a;
+    border-radius: 999px;
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+.store-master-slider:before {
+    content: "";
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    left: 5px;
+    top: 5px;
+    background: #fff;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+
+.store-master-toggle input:checked + .store-master-slider {
+    background: #2ecc71;
+}
+
+.store-master-toggle input:checked + .store-master-slider:before {
+    transform: translateX(44px);
+}
+
+.admin-branch-control-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+}
+
+.admin-branch-control-card {
+    background: #252525;
+    border: 1px solid #333;
+    border-radius: 20px;
+    padding: 20px;
+    transition: 0.25s ease;
+}
+
+.admin-branch-control-card.branch-open {
+    box-shadow: 0 0 0 1px rgba(46,204,113,0.12);
+}
+
+.admin-branch-control-card.branch-closed {
+    box-shadow: 0 0 0 1px rgba(231,76,60,0.08);
+}
+
+.branch-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.branch-card-top h4 {
+    margin: 0 0 6px 0;
+    color: #fff;
+    font-size: 18px;
+}
+
+.branch-card-top p {
+    margin: 0;
+    color: #9f9f9f;
+    font-size: 13px;
+}
+
+.branch-live-pill {
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.live-open {
+    background: rgba(46,204,113,0.14);
+    color: #7ef0a9;
+}
+
+.live-closed {
+    background: rgba(231,76,60,0.14);
+    color: #ff9f9f;
+}
+
+.branch-toggle-btn {
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: 0.2s;
+}
+
+.btn-open-branch {
+    background: #2ecc71;
+    color: white;
+}
+
+.btn-close-branch {
+    background: #e74c3c;
+    color: white;
+}
+
+.branch-toggle-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.branch-disabled-note {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #ffb3b3;
+    line-height: 1.5;
+}
+
+.branch-summary-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255,81,0,0.14);
+    color: #ffb089;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
             </style>
 
             <div id="view-settings" class="view-section <?php echo $current_view === 'settings' ? 'active' : ''; ?>">
@@ -3799,6 +4013,71 @@ try {
                             STORE IS <?php echo strtoupper($storeStatus); ?>
                         </span>
                     </div>
+
+                    <div id="view-settings" class="view-section <?php echo $current_view === 'settings' ? 'active' : ''; ?>">
+
+                    <div class="panel-card">
+    <h3>Branch Control</h3>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:15px;">
+        <?php foreach ($branchesStatusList as $branch): ?>
+            <div style="background:#2d2d2d; padding:15px; border-radius:12px;">
+                
+                <h4 style="margin:0; color:white;">
+                    <?php echo htmlspecialchars($branch['name']); ?>
+                </h4>
+
+                <p style="color:#aaa; font-size:13px;">
+                    <?php echo htmlspecialchars($branch['phone'] ?: '-'); ?>
+                </p>
+
+                <p style="font-weight:bold; color:
+                    <?php echo $branch['is_open'] ? '#2ecc71' : '#e74c3c'; ?>">
+                    <?php echo (int)$branch['effective_open'] === 1 ? 'OPEN' : 'CLOSED'; ?>
+                </p>
+
+                <form method="POST">
+                    <input type="hidden" name="view" value="settings">
+                    <input type="hidden" name="action" value="toggle_branch_store">
+                    <input type="hidden" name="branch_id" value="<?php echo $branch['id']; ?>">
+                    <input type="hidden" name="is_open" value="<?php echo (int)$branch['is_open'] === 1 ? 0 : 1; ?>">
+
+                    <button type="submit" style="
+                        width:100%;
+                        padding:10px;
+                        border:none;
+                        border-radius:8px;
+                        font-weight:bold;
+                        background:<?php echo $branch['is_open'] ? '#e74c3c' : '#2ecc71'; ?>;
+                        color:white;
+                        cursor:pointer;
+                    ">
+                        <?php echo (int)$branch['effective_open'] === 1 ? 'Close Branch' : 'Open Branch'; ?>
+                    </button>
+                </form>
+
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+    <div class="panel-card">
+        <div class="store-control-hero">
+            <div>
+                <div class="store-control-label">GLOBAL STORE CONTROL</div>
+                <h2><?php echo $storeStatus === 'open' ? 'All branches are accepting orders' : 'All branches are currently closed'; ?></h2>
+                <p>Use this switch to instantly sync availability across admin, staff, and customer pages.</p>
+            </div>
+
+            <form method="POST">
+    <input type="hidden" name="view" value="settings">
+    <input type="hidden" name="action" value="toggle_store">
+    <label class="switch">
+        <input type="checkbox" name="status" value="1" <?php echo $storeStatus === 'open' ? 'checked' : ''; ?> onchange="this.form.submit()">
+        <span class="slider"></span>
+    </label>
+</form>
+        </div>
+    </div>
 
                     <h4 style="color: #ffffff; margin-bottom: 15px; padding-left: 5px;">Branch Status</h4>
                     <div

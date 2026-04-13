@@ -3,14 +3,22 @@ include 'header.php';
 include_once 'db.php';
 
 $globalStoreStatus = 'open';
-$openBranches = [];
+$branches = [];
+$availableBranches = [];
+
 try {
-    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status'");
+    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status' LIMIT 1");
     $globalStoreStatus = trim(strtolower($stmt->fetchColumn() ?: 'open'));
 
+    $stmt = $pdo->query("SELECT id, name, phone, is_open FROM branches ORDER BY name ASC");
+    $branches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
     if ($globalStoreStatus === 'open') {
-        $stmt = $pdo->query("SELECT name, phone, is_open FROM branches ORDER BY name ASC");
-        $openBranches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($branches as $branch) {
+            if ((int)$branch['is_open'] === 1) {
+                $availableBranches[] = $branch;
+            }
+        }
     }
 } catch (Exception $e) {}
 ?>
@@ -141,7 +149,66 @@ try {
     color: red;
     font-weight: bold;
 }
+
+.store-closed-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 65vh;
+}
+
+.store-closed-card {
+    max-width: 620px;
+    width: 100%;
+    background: linear-gradient(145deg, #1f1f1f, #2a2a2a);
+    border: 1px solid rgba(255, 87, 34, 0.2);
+    border-radius: 28px;
+    padding: 45px 35px;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+}
+
+.store-closed-icon {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: rgba(255, 87, 34, 0.12);
+    color: #ff5722;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 38px;
+    margin: 0 auto 20px;
+}
+
+.store-closed-card h1 {
+    color: #fff;
+    font-size: 2rem;
+    margin-bottom: 12px;
+    font-weight: 900;
+}
+
+.store-closed-card p {
+    color: #d0d0d0;
+    font-size: 1rem;
+    line-height: 1.7;
+    margin-bottom: 20px;
+}
+
+.closed-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.06);
+    color: #ffb089;
+    padding: 10px 16px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
 </style>
+
+<link rel="icon" href="logo.png">
 
 <img src="images/fries.png" class="bg-asset fries" alt="">
 <img src="images/tomato.png" class="bg-asset tomato" alt="">
@@ -150,34 +217,49 @@ try {
 <img src="images/veggie.png" class="bg-asset veggie" alt="">
 
 <main class="selection-container">
-    <h1 class="title">CHOOSE YOUR <span>BRANCH</span></h1>
-    
-    <div class="branch-grid">
-        <?php foreach($openBranches as $branch): ?>
-            <div class="card <?php echo !$branch['is_open'] ? 'closed' : ''; ?>" 
-     <?php if($branch['is_open']): ?>
-         onclick="selectBranch('<?php echo htmlspecialchars($branch['name']); ?>')"
-     <?php endif; ?>>
-                
-                <?php 
-                    // Dynamic icons to match your pic
-                    $icon = "fa-store";
-                    if($branch['name'] == 'Kangar') $icon = "fa-utensils";
-                    if($branch['name'] == 'Jejawi') $icon = "fa-hamburger";
-                    if($branch['name'] == 'Kuala Perlis') $icon = "fa-map-marker-alt";
-                    if($branch['name'] == 'Beseri') $icon = "fa-fire";
-                ?>
-
-                <i class="fas <?php echo $icon; ?>"></i>
-               <p>
-    <?php echo htmlspecialchars($branch['name']); ?>
-    <?php if(!$branch['is_open']): ?>
-        <br><span class="closed-label">CLOSED</span>
-    <?php endif; ?>
-</p>
+    <?php if ($globalStoreStatus !== 'open' || empty($availableBranches)): ?>
+        <div class="store-closed-wrapper">
+            <div class="store-closed-card">
+                <div class="store-closed-icon">
+                    <i class="fas fa-store-slash"></i>
+                </div>
+                <h1>Semua Branch Ditutup</h1>
+                <p>Kami sedang berehat sebentar. Sila cuba lagi nanti apabila semua branch kembali beroperasi.</p>
+                <div class="closed-note">
+                    <i class="fas fa-circle-info"></i>
+                    Status semasa dikawal oleh pihak admin.
+                </div>
             </div>
-        <?php endforeach; ?>
-    </div>
+        </div>
+    <?php else: ?>
+        <h1 class="title">CHOOSE YOUR <span>BRANCH</span></h1>
+
+        <div class="branch-grid">
+            <?php foreach($branches as $branch): ?>
+                <div class="card <?php echo !(int)$branch['is_open'] ? 'closed' : ''; ?>"
+                    <?php if((int)$branch['is_open'] === 1): ?>
+                        onclick="selectBranch('<?php echo htmlspecialchars($branch['name']); ?>')"
+                    <?php endif; ?>>
+                    
+                    <?php 
+                        $icon = "fa-store";
+                        if($branch['name'] == 'Kangar') $icon = "fa-utensils";
+                        if($branch['name'] == 'Jejawi') $icon = "fa-hamburger";
+                        if($branch['name'] == 'Kuala Perlis') $icon = "fa-map-marker-alt";
+                        if($branch['name'] == 'Beseri') $icon = "fa-fire";
+                    ?>
+
+                    <i class="fas <?php echo $icon; ?>"></i>
+                    <p>
+                        <?php echo htmlspecialchars($branch['name']); ?>
+                        <?php if(!(int)$branch['is_open']): ?>
+                            <br><span class="closed-label">CLOSED</span>
+                        <?php endif; ?>
+                    </p>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
 </main>
 
 

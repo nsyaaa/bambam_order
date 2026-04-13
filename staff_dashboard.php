@@ -18,17 +18,24 @@ $branch_email = '-';
 $branch_phone = '-';
 $branch_is_open = 0;
 
+$global_store_status = 'open';
+
 try {
-   $stmt = $pdo->prepare("SELECT name, email, phone, is_open FROM branches WHERE id = ? LIMIT 1");
+    $stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'global_store_status' LIMIT 1");
+    $global_store_status = trim(strtolower($stmt->fetchColumn() ?: 'open'));
+
+    $stmt = $pdo->prepare("SELECT name, email, phone, is_open FROM branches WHERE id = ? LIMIT 1");
     $stmt->execute([$branch_id]);
     $branch = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($branch) {
-    $branch_name = $branch['name'] ?? $branch_name;
-    $branch_email = $branch['email'] ?? '-';
-    $branch_phone = $branch['phone'] ?? '-';
-    $branch_is_open = $branch['is_open'] ?? 0;
-}
+        $branch_name = $branch['name'] ?? $branch_name;
+        $branch_email = $branch['email'] ?? '-';
+        $branch_phone = $branch['phone'] ?? '-';
+
+        // branch buka hanya kalau global open DAN branch open
+        $branch_is_open = ($global_store_status === 'open' && (int)$branch['is_open'] === 1) ? 1 : 0;
+    }
 } catch (Exception $e) {
     $branch_email = '-';
     $branch_phone = '-';
@@ -41,25 +48,31 @@ try {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kitchen Dashboard</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link rel="icon" href="logo.png">
 <style>
     * { box-sizing: border-box; }
-    :root {
-        --primary: #ff5100;
-        --primary-hover: #e04600;
-        --dark: #333;
-        --light: #f4f6f8;
-        --white: #2d2d2d;
-        --gray: #444444;
-        --success: #2ecc71;
-        --warning: #f1c40f;
-        --danger: #e74c3c;
-        --text-main: #ffffff;
-        --text-muted: #aaaaaa;
-    }
+:root {
+    --primary: #ff5100;
+    --primary-hover: #e04600;
+
+    --bg-main: #1f1f1f;     /* background utama */
+    --bg-card: #2d2d2d;     /* kotak/card */
+    --bg-soft: #3a3a3a;     /* section dalam */
+
+    --text-main: #ffffff;
+    --text-muted: #aaaaaa;
+
+    --border: #444;
+
+    --success: #2ecc71;
+    --warning: #f1c40f;
+    --danger: #e74c3c;
+}
+
     body {
         margin: 0;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: black;
+        background: #1f1f1f;
         color: var(--text-main);
         display: flex;
         height: 100vh;
@@ -67,7 +80,7 @@ try {
     }
     .sidebar {
         width: 260px;
-        background: var(--bg-card);
+        background: #121212; /* hitam premium */
         border-right: 1px solid var(--border-color);
         display: flex;
         flex-direction: column;
@@ -136,7 +149,7 @@ try {
     }
 
 .stat-card {
-    background: #1c1c1c;
+    background: var(--bg-card);
     padding: 25px;
     border-radius: 16px;
     text-align: center;
@@ -170,6 +183,13 @@ try {
 .stat-card.danger { border-bottom: 3px solid #e74c3c; }
 .stat-card.primary { border-bottom: 3px solid var(--primary); }
 .stat-card.info { border-bottom: 3px solid #3498db; }
+.stat-card.success {
+    border-bottom: 3px solid var(--success);
+}
+
+.stat-card.success h3 {
+    color: var(--success);
+}
 
 .stat-card.warning h3 { color: #f1c40f; }
 .stat-card.danger h3 { color: #e74c3c; }
@@ -465,29 +485,29 @@ try {
     padding: 14px 20px;
     font-size: 15px;
     border-radius: 12px;
-    border: 1px solid var(--border-color);
-    background: #222;
-    color: white;
+    border: 1px solid #ccc;
+    background: #ffffff;   /* putih */
+    color: #333;           /* text gelap */
     outline: none;
     width: 100%;
     transition: 0.2s;
 }
 
 #stock-search::placeholder {
-    color: #999;
+    color: #888;
 }
 
 #stock-search:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(255, 81, 0, 0.2);
+    box-shadow: 0 0 0 3px rgba(255, 81, 0, 0.15);
 }
 
 #stock-filter {
     padding: 12px 18px;
     border-radius: 12px;
-    border: 1px solid var(--border-color);
-    background: #222;
-    color: white;
+    border: 1px solid #ccc;
+    background: #ffffff;   /* putih */
+    color: #333;
     font-weight: 600;
     min-width: 160px;
     outline: none;
@@ -497,7 +517,7 @@ try {
 
 #stock-filter:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(255, 81, 0, 0.2);
+    box-shadow: 0 0 0 3px rgba(255, 81, 0, 0.15);
 }
 
 .stock-action-group {
@@ -636,17 +656,17 @@ try {
 .fill-out { background: linear-gradient(90deg, #e74c3c, #c0392b); }
 
     .warning-banner {
-        background: rgba(231, 76, 60, 0.1);
-        border: 1px solid var(--danger);
-        color: var(--danger);
-        padding: 12px 20px;
-        border-radius: 12px;
-        margin-bottom: 20px;
-        font-weight: 700;
-        display: none;
-        align-items: center;
-        gap: 10px;
-    }
+    background: rgba(231, 76, 60, 0.1);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    padding: 12px 20px;
+    border-radius: 12px;
+    margin: 0 0 20px 0;
+    font-weight: 700;
+    display: none;
+    align-items: center;
+    gap: 10px;
+}
 
     @media (max-width: 768px) {
         .stats-grid { grid-template-columns: 1fr; }
@@ -674,10 +694,6 @@ try {
 </div>
 
 <div class="main-content">
-    <div id="low-stock-banner" class="warning-banner">
-        <i class="fas fa-exclamation-triangle"></i>
-        <span id="low-stock-msg"></span>
-    </div>
     <header class="top-header">
     <div class="user-info">
         <h2>Welcome, <?php echo htmlspecialchars($branch_name); ?> Branch</h2>
@@ -701,6 +717,11 @@ try {
     </div>
 </header>
 
+<div id="low-stock-banner" class="warning-banner">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span id="low-stock-msg"></span>
+    </div>
+
     <div id="view-dashboard" class="view-section">
         <h3 style="margin-top:0; margin-bottom:15px;">Branch Overview</h3>
         <div id="branch-overview-container" class="branch-overview-grid"></div>
@@ -723,8 +744,7 @@ try {
                 <p>Ready</p>
                 <h3 id="stat-ready">0</h3>
             </div>
-            <div class="stat-card" onclick="filterOrders('Served')" style="cursor:pointer;">
-                <p>Complete</p>
+<div class="stat-card success" onclick="filterOrders('Served')" style="cursor:pointer;">                <p>Complete</p>
                 <h3 id="stat-complete">0</h3>
             </div>
         </div>
@@ -789,20 +809,20 @@ try {
             <h2 style="margin:0;">Stock Management</h2>
         </div>
 
-        <div class="stock-stats-grid">
-            <div class="stat-card">
-                <p>Total Items</p>
-                <h3 id="stock-stat-total">0</h3>
-            </div>
-            <div class="stat-card warning">
-                <p>Low Stock</p>
-                <h3 id="stock-stat-low">0</h3>
-            </div>
-            <div class="stat-card danger">
-                <p>Out of Stock</p>
-                <h3 id="stock-stat-out">0</h3>
-            </div>
-        </div>
+<div class="stock-stats-grid">
+    <div class="stat-card" onclick="filterStockStats('All')" style="cursor:pointer;">
+        <p>Total Items</p>
+        <h3 id="stock-stat-total">0</h3>
+    </div>
+    <div class="stat-card warning" onclick="filterStockStats('Low Stock')" style="cursor:pointer;">
+        <p>Low Stock</p>
+        <h3 id="stock-stat-low">0</h3>
+    </div>
+    <div class="stat-card danger" onclick="filterStockStats('Out of Stock')" style="cursor:pointer;">
+        <p>Out of Stock</p>
+        <h3 id="stock-stat-out">0</h3>
+    </div>
+</div>
 
         <div style="display:flex; gap:15px; margin-bottom:20px; background:var(--bg-card); padding:10px 20px; border-radius:15px; border: 1px solid var(--border-color); align-items:center;">
             <div class="search-box" style="flex:2;">
@@ -810,8 +830,7 @@ try {
                 <input type="text" id="stock-search"
                     placeholder="Search item by name..." onkeyup="loadStock()">
             </div>
-            <select id="stock-filter" onchange="loadStock()">
-                <option value="All">All Status</option>
+<select id="stock-filter" onchange="currentStockStatFilter = this.value; loadStock()">                <option value="All">All Status</option>
                 <option value="In Stock">Available</option>
                 <option value="Low Stock">Low Stock</option>
                 <option value="Out of Stock">Out of Stock</option>
@@ -890,6 +909,7 @@ let isFirstLoad = true;
 let allOrders = [];
 let selectedStaffId = null;
 let selectedStaffName = '';
+let currentStockStatFilter = 'All';
 const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -905,11 +925,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1000);
 });
 
+function filterStockStats(status) {
+    currentStockStatFilter = status;
+
+    const dropdown = document.getElementById('stock-filter');
+    if (dropdown) {
+        dropdown.value = status;
+    }
+
+    loadStock();
+}
+
 function switchView(viewId, navItem) {
     document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
     document.getElementById('view-' + viewId).style.display = 'block';
+
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     navItem.classList.add('active');
+
+    // 🔥 ADD NI
+    const banner = document.getElementById('low-stock-banner');
+    if (viewId !== 'stock') {
+        banner.style.display = 'none';
+    }
 }
 
 function filterOrders(status) {
@@ -1030,16 +1068,37 @@ if (currentFilter === 'Served') {
         }
     }
 
-    let actionButton = '';
-    if (order.status === 'Pending') {
-        actionButton = `<button class="action-btn btn-prepare" onclick="updateStatus(${order.id}, 'Preparing')"><i class="fas fa-fire"></i> Start Cooking</button>`;
-    } else if (order.status === 'Preparing') {
-        actionButton = `<button class="action-btn btn-ready" onclick="updateStatus(${order.id}, 'Ready')"><i class="fas fa-check"></i> Mark Ready</button>`;
-    } else if (order.status === 'Ready') {
-        actionButton = `<button class="action-btn btn-serve" onclick="updateStatus(${order.id}, 'Served')"><i class="fas fa-check-double"></i> Complete</button>`;
-    } else if (order.status === 'Served') {
-        actionButton = `<div style="text-align:center; color:green; font-weight:bold;"><i class="fas fa-check-double"></i> Served</div>`;
-    }
+let actionButton = '';
+
+if (order.status === 'Pending') {
+    actionButton = `
+        <button class="action-btn btn-prepare" onclick="updateStatus(${order.id}, 'Preparing')">
+            <i class="fas fa-fire"></i> Start Cooking
+        </button>
+
+        <button class="action-btn btn-delete" onclick="cancelOrder(${order.id})">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+    `;
+} else if (order.status === 'Preparing') {
+    actionButton = `
+        <button class="action-btn btn-ready" onclick="updateStatus(${order.id}, 'Ready')">
+            <i class="fas fa-check"></i> Mark Ready
+        </button>
+    `;
+} else if (order.status === 'Ready') {
+    actionButton = `
+        <button class="action-btn btn-serve" onclick="updateStatus(${order.id}, 'Served')">
+            <i class="fas fa-check-double"></i> Complete
+        </button>
+    `;
+} else if (order.status === 'Served') {
+    actionButton = `
+        <div style="text-align:center; color:green; font-weight:bold;">
+            <i class="fas fa-check-double"></i> Served
+        </div>
+    `;
+}
 
 
     let itemsHtml = Array.isArray(order.items)
@@ -1154,6 +1213,19 @@ function updateStatus(id, newStatus) {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ id: id, status: newStatus })
+    }).then(() => loadOrders());
+}
+
+function cancelOrder(id) {
+    if (!confirm("Cancel this order?")) return;
+
+    fetch('update_order_status.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ 
+            id: id, 
+            status: 'Cancelled' 
+        })
     }).then(() => loadOrders());
 }
 
@@ -1304,159 +1376,186 @@ const defaultStock = [
 ];
 
 function loadStock() {
-    let stock = JSON.parse(localStorage.getItem('bambam_stock')) || defaultStock;
-    stock = stock.map(item => {
-        if (item.level === undefined) item.level = item.status === 'In Stock' ? 50 : (item.status === 'Low Stock' ? 5 : 0);
-        return item;
-    });
-    
-    // Stats
-    const totalItems = stock.length;
-    const lowCount = stock.filter(i => i.status === 'Low Stock').length;
-    const outCount = stock.filter(i => i.status === 'Out of Stock').length;
-    
-    document.getElementById('stock-stat-total').innerText = totalItems;
-    document.getElementById('stock-stat-low').innerText = lowCount;
-    document.getElementById('stock-stat-out').innerText = outCount;
-    
-    // Low stock banner logic
-    const banner = document.getElementById('low-stock-banner');
-    const totalLow = lowCount + outCount;
-    if (totalLow > 0) {
-        banner.style.display = 'flex';
-        document.getElementById('low-stock-msg').innerText = `${totalLow} items are low or out of stock!`;
-    } else {
-        banner.style.display = 'none';
-    }
+    fetch('get_inventory.php')
+        .then(res => res.json())
+        .then(result => {
+            if (!result.success) return;
 
-    const container = document.getElementById('stock-list-container');
-    const searchInput = document.getElementById('stock-search');
-    const search = searchInput ? searchInput.value.toLowerCase() : '';
-    const filterInput = document.getElementById('stock-filter');
-    const filter = filterInput ? filterInput.value : 'All';
-    container.innerHTML = '';
+            let stock = result.data.map(item => ({
+                id: item.id,
+                name: item.item_name,
+                level: parseInt(item.quantity) || 0,
+                status: item.status,
+                unit: item.unit || 'units'
+            }));
 
-    stock.forEach((item, index) => {
-    if (search && !item.name.toLowerCase().replace(/[^\w\s]/gi, '').includes(search.replace(/[^\w\s]/gi, ''))) return;
-    if (filter !== 'All' && item.status !== filter) return;
+            const totalItems = stock.length;
+            const lowCount = stock.filter(i => i.status === 'Low Stock').length;
+            const outCount = stock.filter(i => i.status === 'Out of Stock').length;
 
-    let statusBadge = '';
-    let mainActionClass = '';
-    let mainActionText = '';
-    let mainActionOnclick = '';
+            document.getElementById('stock-stat-total').innerText = totalItems;
+            document.getElementById('stock-stat-low').innerText = lowCount;
+            document.getElementById('stock-stat-out').innerText = outCount;
 
-    let fillWidth = Math.min((item.level / 50) * 100, 100);
-    let fillClass = 'fill-high';
+            const banner = document.getElementById('low-stock-banner');
+            const totalLow = lowCount + outCount;
+            const isStockView = document.getElementById('view-stock').style.display === 'block';
 
-    if (item.status === 'In Stock') {
-        statusBadge = '<span class="badge available">✅ Available</span>';
-        mainActionClass = 'stock-action-btn stock-action-warning';
-        mainActionText = '⚠️ Report Low';
-        mainActionOnclick = `setStockStatus(${index}, 'Low Stock')`;
-    } 
-    else if (item.status === 'Low Stock') {
-        statusBadge = '<span class="badge low">⚠️ Low Stock</span>';
-        mainActionClass = 'stock-action-btn stock-action-danger';
-        mainActionText = '❌ Report Out';
-        mainActionOnclick = `setStockStatus(${index}, 'Out of Stock')`;
-        fillClass = 'fill-low';
-    } 
-    else {
-        statusBadge = '<span class="badge out">❌ Out of Stock</span>';
-        mainActionClass = 'stock-action-btn stock-action-success';
-        mainActionText = '✅ Restock';
-        mainActionOnclick = `restockItem(${index})`;
-        fillClass = 'fill-out';
-        fillWidth = 5; // Minimal red bar for visibility
-    }
+            if (totalLow > 0 && isStockView) {
+                banner.style.display = 'flex';
+                document.getElementById('low-stock-msg').innerText = `${totalLow} items are low or out of stock!`;
+            } else {
+                banner.style.display = 'none';
+            }
 
-    const actionBtn = `
-        <div class="stock-action-group">
-            <button class="${mainActionClass}" onclick="${mainActionOnclick}">
-                ${mainActionText}
-            </button>
-            <button class="stock-action-btn stock-action-edit" onclick="editStockLevel(${index})">
-                ✏️ Update
-            </button>
-        </div>
-    `;
+            const container = document.getElementById('stock-list-container');
+            const searchInput = document.getElementById('stock-search');
+            const search = searchInput ? searchInput.value.toLowerCase() : '';
+            const filterInput = document.getElementById('stock-filter');
+            const filter = currentStockStatFilter !== 'All'
+                ? currentStockStatFilter
+                : (filterInput ? filterInput.value : 'All');
 
-    container.innerHTML += `
-    <tr>
-        <td style="padding:18px 15px;">
-            <div class="stock-item-name">${item.name}</div>
-            <div class="stock-bar">
-                <div class="stock-fill ${fillClass}" style="width: ${fillWidth}%;"></div>
-            </div>
-        </td>
-        <td style="padding:18px 15px;" class="stock-level-cell">${item.level}</td>
-        <td style="padding:18px 15px;" class="stock-status-cell">${statusBadge}</td>
-        <td style="padding:18px 15px;" class="stock-controls-cell">${actionBtn}</td>
-    </tr>
-`;
-});
+            container.innerHTML = '';
+
+            stock.forEach((item) => {
+                if (search && !item.name.toLowerCase().includes(search)) return;
+                if (filter !== 'All' && item.status !== filter) return;
+
+                let statusBadge = '';
+                let mainActionClass = '';
+                let mainActionText = '';
+                let mainActionOnclick = '';
+
+                let fillWidth = Math.min((item.level / 50) * 100, 100);
+                let fillClass = 'fill-high';
+
+                if (item.status === 'In Stock') {
+                    statusBadge = '<span class="badge available">✅ Available</span>';
+                    mainActionClass = 'stock-action-btn stock-action-warning';
+                    mainActionText = '⚠️ Report Low';
+                    mainActionOnclick = `setStockStatus(${item.id}, 'Low Stock')`;
+                } else if (item.status === 'Low Stock') {
+                    statusBadge = '<span class="badge low">⚠️ Low Stock</span>';
+                    mainActionClass = 'stock-action-btn stock-action-danger';
+                    mainActionText = '❌ Report Out';
+                    mainActionOnclick = `setStockStatus(${item.id}, 'Out of Stock')`;
+                    fillClass = 'fill-low';
+                } else {
+                    statusBadge = '<span class="badge out">❌ Out of Stock</span>';
+                    mainActionClass = 'stock-action-btn stock-action-success';
+                    mainActionText = '✅ Restock';
+                    mainActionOnclick = `restockItem(${item.id})`;
+                    fillClass = 'fill-out';
+                    fillWidth = 5;
+                }
+
+                const actionBtn = `
+                    <div class="stock-action-group">
+                        <button class="${mainActionClass}" onclick="${mainActionOnclick}">
+                            ${mainActionText}
+                        </button>
+                        <button class="stock-action-btn stock-action-edit" onclick="editStockLevel(${item.id}, ${item.level})">
+                            ✏️ Update
+                        </button>
+                    </div>
+                `;
+
+                container.innerHTML += `
+                    <tr>
+                        <td style="padding:18px 15px;">
+                            <div class="stock-item-name">${item.name}</div>
+                            <div class="stock-bar">
+                                <div class="stock-fill ${fillClass}" style="width: ${fillWidth}%;"></div>
+                            </div>
+                        </td>
+                        <td style="padding:18px 15px;" class="stock-level-cell">${item.level}</td>
+                        <td style="padding:18px 15px;" class="stock-status-cell">${statusBadge}</td>
+                        <td style="padding:18px 15px;" class="stock-controls-cell">${actionBtn}</td>
+                    </tr>
+                `;
+            });
+        });
 }
 
 function updateDashboardStock() {
-    const stock = JSON.parse(localStorage.getItem('bambam_stock')) || defaultStock;
-    const container = document.getElementById('dashboard-stock-list');
-    if (!container) return;
-    container.innerHTML = '';
+    fetch('get_inventory.php')
+        .then(res => res.json())
+        .then(result => {
+            if (!result.success) return;
 
-    stock.forEach(item => {
-        let statusClass = 'stock-ok';
-        let statusText = 'Available';
-        if (item.status === 'Low Stock') {
-            statusClass = 'stock-low';
-            statusText = 'Low Stock';
-        } else if (item.status === 'Out of Stock') {
-            statusClass = 'stock-out';
-            statusText = 'Out of Stock';
-        }
+            const stock = result.data;
+            const container = document.getElementById('dashboard-stock-list');
+            if (!container) return;
 
-        container.innerHTML += `
-            <div class="stock-item">
-                <span class="stock-name">${item.name}</span>
-                <span class="stock-status ${statusClass}">${statusText}</span>
-            </div>
-        `;
+            container.innerHTML = '';
+
+            stock.forEach(item => {
+                let statusClass = 'stock-ok';
+                let statusText = 'Available';
+
+                if (item.status === 'Low Stock') {
+                    statusClass = 'stock-low';
+                    statusText = 'Low Stock';
+                } else if (item.status === 'Out of Stock') {
+                    statusClass = 'stock-out';
+                    statusText = 'Out of Stock';
+                }
+
+                container.innerHTML += `
+                    <div class="stock-item">
+                        <span class="stock-name">${item.item_name}</span>
+                        <span class="stock-status ${statusClass}">${statusText}</span>
+                    </div>
+                `;
+            });
+        });
+}
+
+function setStockStatus(id, status) {
+    if (!confirm(`Mark ${status}?`)) return;
+
+    fetch('update_inventory.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status })
+    })
+    .then(res => res.json())
+    .then(() => {
+        loadStock();
+        updateDashboardStock();
     });
 }
 
-function setStockStatus(index, status) {
-    if(!confirm(`Mark ${status}?`)) return;
-    
-    const stock = JSON.parse(localStorage.getItem('bambam_stock')) || defaultStock;
-    stock[index].status = status;
-    if (status === 'Out of Stock') stock[index].level = 0;
-    localStorage.setItem('bambam_stock', JSON.stringify(stock));
-    loadStock();
-    updateDashboardStock();
-}
-
-function restockItem(index) {
-    const stock = JSON.parse(localStorage.getItem('bambam_stock')) || defaultStock;
+function restockItem(id) {
     const newLevel = prompt("Enter new stock level:", 50);
     if (newLevel !== null && !isNaN(newLevel)) {
-        stock[index].level = parseInt(newLevel);
-        stock[index].status = 'In Stock';
-        localStorage.setItem('bambam_stock', JSON.stringify(stock));
-        loadStock();
-        updateDashboardStock();
+        fetch('update_inventory.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, quantity: parseInt(newLevel) })
+        })
+        .then(res => res.json())
+        .then(() => {
+            loadStock();
+            updateDashboardStock();
+        });
     }
 }
 
-function editStockLevel(index) {
-    const stock = JSON.parse(localStorage.getItem('bambam_stock')) || defaultStock;
-    const newLevel = prompt("Update stock level:", stock[index].level);
+function editStockLevel(id, currentLevel) {
+    const newLevel = prompt("Update stock level:", currentLevel);
     if (newLevel !== null && !isNaN(newLevel)) {
-        stock[index].level = parseInt(newLevel);
-        if (stock[index].level === 0) stock[index].status = 'Out of Stock';
-        else if (stock[index].level < 10) stock[index].status = 'Low Stock';
-        else stock[index].status = 'In Stock';
-        localStorage.setItem('bambam_stock', JSON.stringify(stock));
-        loadStock();
-        updateDashboardStock();
+        fetch('update_inventory.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, quantity: parseInt(newLevel) })
+        })
+        .then(res => res.json())
+        .then(() => {
+            loadStock();
+            updateDashboardStock();
+        });
     }
 }
 
