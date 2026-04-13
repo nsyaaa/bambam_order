@@ -3228,81 +3228,161 @@ try {
             </div>
 
             <!-- VIEW: INVENTORY -->
+            <!-- VIEW: INVENTORY -->
             <div id="view-inventory" class="view-section <?php echo $current_view === 'inventory' ? 'active' : ''; ?>">
                 <div class="panel-card">
-                    <h3 style="margin-top:0; color: #ffffff;">📦 Inventory Management</h3>
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+                        <h3 style="margin:0; color: #ffffff;">📦 Inventory Management</h3>
+                        <span style="font-size:13px; color:#a0aec0;">Track stock like staff view</span>
+                    </div>
 
                     <!-- Add Stock Form -->
                     <form method="POST"
-                        style="display: flex; gap: 10px; margin-bottom: 20px; background: #1d1a2f; padding: 15px; border-radius: 10px;">
+                        style="display:flex; gap:10px; margin-bottom:20px; background:#1d1a2f; padding:15px; border-radius:12px; flex-wrap:wrap;">
                         <input type="hidden" name="action" value="add_stock">
+
                         <input type="text" name="item_name" placeholder="Item Name (e.g. Burger Buns)" required
-                            style="flex: 2; padding: 10px; border: 1px solid #4a5568; border-radius: 5px; background: #373359; color: white;">
+                            style="flex:2; min-width:240px; padding:12px; border:1px solid #4a5568; border-radius:8px; background:#373359; color:white;">
+
                         <input type="number" name="quantity" placeholder="Qty" required
-                            style="width: 80px; padding: 10px; border: 1px solid #4a5568; border-radius: 5px; background: #373359; color: white;">
+                            style="width:100px; padding:12px; border:1px solid #4a5568; border-radius:8px; background:#373359; color:white;">
+
                         <input type="text" name="unit" placeholder="Unit (e.g. packs)"
-                            style="width: 100px; padding: 10px; border: 1px solid #4a5568; border-radius: 5px; background: #373359; color: white;">
+                            style="width:140px; padding:12px; border:1px solid #4a5568; border-radius:8px; background:#373359; color:white;">
+
                         <button type="submit" class="btn-primary">Add Item</button>
                     </form>
 
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Item Name</th>
-                                <th>Quantity</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($inventoryItems)): ?>
+                    <div style="overflow-x:auto;">
+                        <table class="admin-table">
+                            <thead>
                                 <tr>
-                                    <td colspan="4" style="text-align:center; color:#a0aec0;">No inventory items found.</td>
+                                    <th>Item</th>
+                                    <th>Stock Level</th>
+                                    <th>Status</th>
+                                    <th>Controls</th>
                                 </tr>
-                            <?php else:
-                                foreach ($inventoryItems as $item): ?>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($inventoryItems)): ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($item['item_name']); ?></td>
-                                        <td>
-                                            <form method="POST" style="display:flex; gap:5px; align-items:center;">
-                                                <input type="hidden" name="action" value="update_stock">
-                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
-                                                <input type="number" name="quantity" value="<?php echo $item['quantity']; ?>"
-                                                    style="width:60px; padding:5px; border:1px solid #4a5568; border-radius:4px; background: #373359; color: white;">
-                                                <span
-                                                    style="font-size:12px; color:#a0aec0;"><?php echo htmlspecialchars($item['unit']); ?></span>
-                                                <button type="submit" class="btn-primary"
-                                                    style="padding:5px 10px; font-size:12px;">Update</button>
-                                            </form>
-                                        </td>
-                                        <td>
-                                            <?php
-                                            $statusClass = 'status-served'; // default gray
-                                            if ($item['status'] == 'In Stock')
-                                                $statusClass = 'status-ready';
-                                            if ($item['status'] == 'Low Stock')
-                                                $statusClass = 'status-pending';
-                                            if ($item['status'] == 'Out of Stock')
-                                                $statusClass = 'status-out';
-                                            ?>
-                                            <span class="status-badge <?php echo $statusClass; ?>"
-                                                style="<?php echo $item['status'] == 'Out of Stock' ? 'background:rgba(220, 38, 38, 0.1); color:#f87171; border-color: rgba(220, 38, 38, 0.3);' : ''; ?>">
-                                                <?php echo htmlspecialchars($item['status']); ?>
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <form method="POST" onsubmit="return confirm('Delete this item?');">
-                                                <input type="hidden" name="action" value="delete_stock">
-                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
-                                                <button type="submit" class="btn-danger">Delete</button>
-                                            </form>
+                                        <td colspan="4" style="text-align:center; color:#a0aec0;">No inventory items found.
                                         </td>
                                     </tr>
-                                <?php endforeach; endif; ?>
-                        </tbody>
-                    </table>
+                                <?php else: ?>
+                                    <?php foreach ($inventoryItems as $item): ?>
+                                        <?php
+                                        $itemName = trim($item['item_name']);
+                                        $lowerItemName = strtolower($itemName);
+                                        $qty = (int) $item['quantity'];
+                                        $unit = htmlspecialchars($item['unit'] ?: 'units');
+
+                                        $emoji = '📦';
+                                        if (str_contains($lowerItemName, 'bun'))
+                                            $emoji = '🍞';
+                                        elseif (str_contains($lowerItemName, 'patty') || str_contains($lowerItemName, 'beef'))
+                                            $emoji = '🥩';
+                                        elseif (str_contains($lowerItemName, 'chicken'))
+                                            $emoji = '🍗';
+                                        elseif (str_contains($lowerItemName, 'cheese'))
+                                            $emoji = '🧀';
+                                        elseif (str_contains($lowerItemName, 'lettuce'))
+                                            $emoji = '🥬';
+                                        elseif (str_contains($lowerItemName, 'tomato'))
+                                            $emoji = '🍅';
+                                        elseif (str_contains($lowerItemName, 'onion'))
+                                            $emoji = '🧅';
+                                        elseif (str_contains($lowerItemName, 'sauce') || str_contains($lowerItemName, 'mayo') || str_contains($lowerItemName, 'chili'))
+                                            $emoji = '🥣';
+                                        elseif (str_contains($lowerItemName, 'egg'))
+                                            $emoji = '🥚';
+                                        elseif (str_contains($lowerItemName, 'potato') || str_contains($lowerItemName, 'fries'))
+                                            $emoji = '🍟';
+                                        elseif (str_contains($lowerItemName, 'drink') || str_contains($lowerItemName, 'cup'))
+                                            $emoji = '🥤';
+
+                                        $statusText = $item['status'];
+                                        $statusClass = 'status-served';
+                                        $statusIcon = '✅';
+
+                                        if ($statusText === 'In Stock') {
+                                            $statusClass = 'status-ready';
+                                            $statusIcon = '✅';
+                                        } elseif ($statusText === 'Low Stock') {
+                                            $statusClass = 'status-pending';
+                                            $statusIcon = '⚠️';
+                                        } elseif ($statusText === 'Out of Stock') {
+                                            $statusClass = 'status-out';
+                                            $statusIcon = '❌';
+                                        }
+                                        ?>
+                                        <tr>
+                                            <td>
+                                                <div style="display:flex; align-items:center; gap:10px;">
+                                                    <span style="font-size:20px;"><?php echo $emoji; ?></span>
+                                                    <div>
+                                                        <div style="font-weight:700; color:#ffffff;">
+                                                            <?php echo htmlspecialchars($itemName); ?>
+                                                        </div>
+                                                        <div style="font-size:12px; color:#a0aec0;">
+                                                            Unit: <?php echo $unit; ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td>
+                                                <div style="font-size:18px; font-weight:800; color:#ffffff;">
+                                                    <?php echo $qty; ?>
+                                                </div>
+                                            </td>
+
+                                            <td>
+                                                <span class="status-badge <?php echo $statusClass; ?>"
+                                                    style="<?php echo $statusText === 'Out of Stock' ? 'background:rgba(220,38,38,0.12); color:#f87171; border-color:rgba(220,38,38,0.35);' : ''; ?>">
+                                                    <?php echo $statusIcon . ' ' . htmlspecialchars(strtoupper($statusText)); ?>
+                                                </span>
+                                            </td>
+
+                                            <td>
+                                                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                                                    <form method="POST"
+                                                        style="display:flex; gap:8px; align-items:center; margin:0;">
+                                                        <input type="hidden" name="action" value="update_stock">
+                                                        <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+
+                                                        <input type="number" name="quantity" value="<?php echo $qty; ?>"
+                                                            style="width:90px; padding:8px; border:1px solid #4a5568; border-radius:6px; background:#373359; color:white;">
+
+                                                        <button type="submit" class="btn-primary"
+                                                            style="padding:8px 14px; font-size:12px;">Update</button>
+                                                    </form>
+
+                                                    <form method="POST" onsubmit="return confirm('Delete this item?');"
+                                                        style="margin:0;">
+                                                        <input type="hidden" name="action" value="delete_stock">
+                                                        <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                        <button type="submit" class="btn-danger">Delete</button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
+
+            <style>
+                .status-out {
+                    background: rgba(220, 38, 38, 0.12);
+                    color: #f87171;
+                    border: 1px solid rgba(220, 38, 38, 0.35);
+                }
+            </style>
 
             <!-- VIEW: REPORTS -->
             <div id="view-reports" class="view-section <?php echo $current_view === 'reports' ? 'active' : ''; ?>">
